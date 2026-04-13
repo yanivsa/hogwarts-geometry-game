@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>אורי והגשר האווירי בבית הספר לקסם</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%2329498f'/%3E%3Cpath d='M10 46 L24 22 L36 40 L46 18 L54 46' stroke='%23f2c45d' stroke-width='5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='46' cy='18' r='5' fill='%23fff3c4'/%3E%3C/svg%3E"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Alef:wght@400;700&family=Rubik:wght@400;500;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="sky">
+      <div class="sun-glow"></div>
+      <div class="magic-dust dust-a"></div>
+      <div class="magic-dust dust-b"></div>
+      <div class="magic-dust dust-c"></div>
+      <div class="cloud cloud-a"></div>
+      <div class="cloud cloud-b"></div>
+      <div class="cloud cloud-c"></div>
+    </div>
+
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">משימת גאומטריה בבית ספר לקסם</p>
+        <h1>אורי והגשר האווירי בבית הספר לקסם</h1>
+      </div>
+      <div class="topbar-actions">
+        <button id="soundToggle" class="ghost-button">צליל: פועל</button>
+        <button id="resetProgress" class="ghost-button danger">איפוס התקדמות</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <aside class="sidebar">
+        <section class="panel story-panel">
+          <p class="panel-kicker">ספר הלחשים</p>
+          <h2 id="storyTitle">גשר הכישוף הראשי קרס</h2>
+          <p id="storyText">
+            כל שלב מחזיר לחיים קטע חדש בגשר המעופף. כדי להפעיל את לחשי היציבות
+            ולצבור נקודות לבית, צריך לזהות ולשרטט גבהים נכון.
+          </p>
+          <div class="bridge-progress">
+            <div id="bridgeFill" class="bridge-fill"></div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-heading">
+            <div>
+              <p class="panel-kicker">מפת התקדמות</p>
+              <h2>10 תחנות</h2>
+            </div>
+            <button id="openMap" class="ghost-button small">פתח</button>
+          </div>
+          <div id="miniMap" class="mini-map"></div>
+        </section>
+
+        <section class="panel">
+          <p class="panel-kicker">מונחים</p>
+          <h2>עברית + אנגלית</h2>
+          <ul class="terms-list">
+            <li><span>גובה</span><strong>altitude</strong></li>
+            <li><span>קודקוד</span><strong>vertex</strong></li>
+            <li><span>מאונך</span><strong>perpendicular</strong></li>
+            <li><span>בסיס</span><strong>base</strong></li>
+          </ul>
+        </section>
+
+        <section class="panel">
+          <p class="panel-kicker">הישגים</p>
+          <h2>לוח אישי</h2>
+          <div id="achievementList" class="achievement-list"></div>
+        </section>
+      </aside>
+
+      <section class="main-stage">
+        <section id="screenStart" class="screen active">
+          <div class="hero-card">
+            <div>
+              <p class="panel-kicker">סיפור המסגרת</p>
+              <h2>בונים מחדש גשר כשפים בעזרת גבהים לכיתה ה׳</h2>
+              <p>
+                כדי לחבר מחדש את בית הספר לקסם לעננים, אורי צריך לפתור שאלות על
+                גובה במשולש ובמקבילית. האווירה היא של פנימיית קסם והרפתקה, אבל
+                המטרה נשארת לימודית ומדויקת: הכנה למבחן בכיתה ה׳.
+              </p>
+            </div>
+            <div class="hero-actions">
+              <button id="startGame" class="primary-button">מתחילים בכישוף</button>
+              <button id="startSandbox" class="secondary-button">חדר ניסויים</button>
+            </div>
+          </div>
+          <div class="start-grid">
+            <article class="info-card">
+              <p class="panel-kicker">מה מחייב</p>
+              <ul>
+                <li>זיהוי גובה נכון ולא נכון</li>
+                <li>שרטוט גבהים במשולשים שונים</li>
+                <li>גובה במקבילית לפי בסיס</li>
+                <li>בסיס, מאונך והמשך צלע</li>
+              </ul>
+            </article>
+            <article class="info-card">
+              <p class="panel-kicker">מה מיוחד כאן</p>
+              <ul>
+                <li>משוב מיידי עם הסבר</li>
+                <li>רמזים פסיביים אחרי השהיה</li>
+                <li>מצב אתגר בשלבים מתקדמים</li>
+                <li>חדר ניסויים לחקירה חופשית</li>
+              </ul>
+            </article>
+          </div>
+        </section>
+
+        <section id="screenDiagnostic" class="screen">
+          <div class="stage-header">
+            <div>
+              <p class="panel-kicker">אבחון עגינה</p>
+              <h2>4 שאלות מהירות לפני תחילת המשחק</h2>
+            </div>
+            <div id="diagnosticProgress" class="stage-chip">0 / 4</div>
+          </div>
+          <div id="diagnosticCard" class="choice-card"></div>
+        </section>
+
+        <section id="screenMap" class="screen">
+          <div class="stage-header">
+            <div>
+              <p class="panel-kicker">מפת הכשפים</p>
+              <h2>בחר תחנה פתוחה</h2>
+            </div>
+          </div>
+          <div id="mapGrid" class="map-grid"></div>
+        </section>
+
+        <section id="screenGame" class="screen">
+          <div class="stage-header">
+            <div>
+              <p class="panel-kicker" id="stageEyebrow">שלב 1</p>
+              <h2 id="stageTitle">מהו גובה</h2>
+              <p id="stageGoal" class="stage-goal"></p>
+            </div>
+            <div class="stage-meta">
+              <div id="stageCounter" class="stage-chip">שאלה 1 / 10</div>
+              <div id="challengeTimer" class="stage-chip hidden">60</div>
+            </div>
+          </div>
+
+          <div class="game-grid">
+            <section class="panel question-panel">
+              <div class="question-topline">
+                <p id="questionPrompt" class="question-prompt"></p>
+                <p id="questionStory" class="question-story"></p>
+              </div>
+              <div class="canvas-shell">
+                <canvas id="gameCanvas" width="900" height="580"></canvas>
+                <div id="hintPulse" class="hint-pulse hidden"></div>
+              </div>
+              <div class="question-toolbar">
+                <div id="angleReadout" class="angle-readout">זווית מול הבסיס: --</div>
+                <div class="toolbar-buttons">
+                  <button id="checkAnswer" class="primary-button">בדיקה</button>
+                  <button id="undoAction" class="secondary-button">Undo</button>
+                  <button id="hintButton" class="ghost-button">רמז</button>
+                </div>
+              </div>
+              <div id="choiceArea" class="choice-area"></div>
+              <div id="feedbackArea" class="feedback-area"></div>
+            </section>
+
+            <section class="panel side-panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="panel-kicker">שליטה במשימה</p>
+                  <h2>מצב נוכחי</h2>
+                </div>
+                <button id="backToMap" class="ghost-button small">מפת כשפים</button>
+              </div>
+              <div class="metric-list">
+                <div class="metric-row">
+                  <span>זיהוי</span>
+                  <strong id="metricIdentify">0 / 0</strong>
+                </div>
+                <div class="metric-row">
+                  <span>שרטוט</span>
+                  <strong id="metricDraw">0 / 0</strong>
+                </div>
+                <div class="metric-row">
+                  <span>נימוק</span>
+                  <strong id="metricReason">0 / 0</strong>
+                </div>
+              </div>
+              <div class="coach-card">
+                <p class="panel-kicker">מלווה פעיל</p>
+                <h3 id="coachName">הכבשה</h3>
+                <p id="coachMessage">
+                  קודם מוצאים בסיס. אחר כך בודקים מאיזה קודקוד צריך לצאת הגובה.
+                </p>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section id="screenSummary" class="screen">
+          <div class="summary-card">
+            <p class="panel-kicker">סיכום שלב</p>
+            <h2 id="summaryTitle">קטע גשר הושלם</h2>
+            <div class="summary-score">
+              <div>
+                <span>ציון שלב</span>
+                <strong id="summaryScore">0 / 10</strong>
+              </div>
+              <div>
+                <span>מצב הגשר</span>
+                <strong id="summaryBridge">קטע ננעל</strong>
+              </div>
+            </div>
+          <div class="summary-breakdown">
+            <div class="breakdown-row">
+              <span>זיהוי</span>
+              <strong id="summaryIdentify">0 / 0</strong>
+            </div>
+              <div class="breakdown-row">
+                <span>שרטוט</span>
+                <strong id="summaryDraw">0 / 0</strong>
+              </div>
+              <div class="breakdown-row">
+                <span>נימוק</span>
+                <strong id="summaryReason">0 / 0</strong>
+              </div>
+              <div class="breakdown-row">
+              <span>נקודת חיזוק</span>
+              <strong id="summaryWeakness">--</strong>
+            </div>
+          </div>
+          <div id="summaryVictory" class="victory-card hidden"></div>
+          <div id="summaryChallenge" class="challenge-card hidden"></div>
+          <div class="summary-actions">
+            <button id="nextStage" class="primary-button">לשלב הבא</button>
+            <button id="goToMapFromSummary" class="secondary-button">חזרה למפה</button>
+          </div>
+          </div>
+        </section>
+
+        <section id="screenSandbox" class="screen">
+          <div class="stage-header">
+            <div>
+              <p class="panel-kicker">חדר ניסויים</p>
+              <h2>חקירה חופשית באקדמיית הקסם</h2>
+              <p class="stage-goal">
+                בחר צורה, לחץ על בסיס, ואז ראה איך הגובה משתנה.
+              </p>
+            </div>
+            <button id="sandboxBack" class="ghost-button">חזרה</button>
+          </div>
+          <div class="game-grid">
+            <section class="panel question-panel">
+              <div class="canvas-shell">
+                <canvas id="sandboxCanvas" width="900" height="580"></canvas>
+              </div>
+              <div class="question-toolbar">
+                <div class="toolbar-buttons">
+                  <button id="sandboxTriangle" class="secondary-button">משולש</button>
+                  <button id="sandboxTriangleWide" class="secondary-button">משולש רחב</button>
+                  <button id="sandboxParallelogram" class="secondary-button">מקבילית</button>
+                  <button id="sandboxParallelogramTilted" class="secondary-button">מקבילית נטויה</button>
+                  <button id="sandboxShowAltitudes" class="primary-button">הראה גבהים</button>
+                </div>
+              </div>
+            </section>
+            <section class="panel side-panel">
+              <div class="coach-card">
+                <p class="panel-kicker">איך עובדים כאן</p>
+                <h3>כלי חקירה</h3>
+                <p id="sandboxText">
+                  לחץ על צלע כדי לבחור בסיס. לאחר מכן לחץ על "הראה גבהים" כדי
+                  לראות את הגובה או הגבהים המתאימים.
+                </p>
+              </div>
+            </section>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
