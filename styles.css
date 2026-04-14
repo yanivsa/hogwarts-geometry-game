@@ -490,16 +490,32 @@ body {
 /* ── Game grid ── */
 .game-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.8fr) minmax(240px, 0.45fr);
-  gap: 16px;
-  align-items: start;
+  grid-template-columns: minmax(320px, 0.35fr) minmax(0, 0.65fr);
+  gap: 20px;
+  align-items: stretch;
 }
-@media (max-width: 1200px) {
+@media (max-width: 900px) {
   .game-grid {
-    grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.6fr);
+    grid-template-columns: 1fr;
   }
-  .side-panel { grid-column: span 2; }
+  .interaction-panel { order: 2; }
+  .question-panel { order: 1; min-height: 400px; }
 }
+
+.question-img-container {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 15px;
+}
+.question-img {
+  max-width: 100%;
+  max-height: 150px;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
 
 .question-panel, .side-panel { min-height: 0; }
 
@@ -792,7 +808,7 @@ h2 { font-family: "Cinzel", serif; color: var(--text-bright); }
 /* ── Responsive ── */
 @media (max-width: 1200px) {
   .layout { grid-template-columns: 1fr; }
-  .hero-card, .game-grid, .summary-breakdown, .map-grid, .start-grid {
+  .hero-card, .summary-breakdown, .map-grid, .start-grid {
     grid-template-columns: 1fr;
   }
   .question-panel, .side-panel { min-height: auto; }

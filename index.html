@@ -218,22 +218,23 @@
           </div>
 
           <div class="game-grid">
-            <section class="panel question-panel">
-              <div class="canvas-shell">
-                <canvas id="gameCanvas" width="900" height="580"></canvas>
-                <div id="hintPulse" class="hint-pulse hidden"></div>
-              </div>
-              <div class="question-toolbar">
-                <div id="angleReadout" class="angle-readout">זווית מול הבסיס: --</div>
-                <div class="toolbar-buttons">
-                  <button id="checkAnswer" class="primary-button">בדיקה</button>
-                  <button id="undoAction" class="secondary-button">Undo</button>
-                  <button id="hintButton" class="ghost-button">רמז</button>
+            <section class="panel interaction-panel">
+              <div class="panel-heading" style="padding-bottom:10px; margin-bottom:10px; border-bottom:1px solid var(--border)">
+                <div>
+                  <p class="panel-kicker">🧙 יומן הקרב</p>
+                  <h2 style="font-size:1.2rem">החלטה מיידית</h2>
+                </div>
+                <div style="display:flex; gap:10px;">
+                  <button id="skipQuestion" class="ghost-button small">דלג ⏭️</button>
+                  <button id="backToMap" class="ghost-button small">🗺️ מפה</button>
                 </div>
               </div>
-            </section>
-
-            <section class="panel interaction-panel">
+              <div class="metric-row-inline" style="display:flex; justify-content:space-around; margin-bottom:15px; font-size:0.85rem; padding:8px; background:var(--bg-card); border-radius:8px">
+                  <span>זיהוי <strong id="metricIdentify" style="color:var(--text)">0/0</strong></span>
+                  <span>שרטוט <strong id="metricDraw" style="color:var(--text)">0/0</strong></span>
+                  <span>נימוק <strong id="metricReason" style="color:var(--text)">0/0</strong></span>
+              </div>
+              
               <div class="question-topline">
                 <p id="questionPrompt" class="question-prompt"></p>
                 <p id="questionStory" class="question-story"></p>
@@ -243,33 +244,10 @@
                 <div id="lightningBarFill" class="lightning-bar-fill"></div>
               </div>
               <div id="choiceArea" class="choice-area"></div>
-              <div id="feedbackArea" class="feedback-area"></div>
-            </section>
-
-            <section class="panel side-panel">
-              <div class="panel-heading">
-                <div>
-                  <p class="panel-kicker">🧙 שליטה בלחש</p>
-                  <h2>מצב נוכחי</h2>
-                </div>
-                <button id="backToMap" class="ghost-button small">🗺️ מפה</button>
-              </div>
-              <div class="metric-list">
-                <div class="metric-row">
-                  <span>זיהוי</span>
-                  <strong id="metricIdentify">0 / 0</strong>
-                </div>
-                <div class="metric-row">
-                  <span>שרטוט</span>
-                  <strong id="metricDraw">0 / 0</strong>
-                </div>
-                <div class="metric-row">
-                  <span>נימוק</span>
-                  <strong id="metricReason">0 / 0</strong>
-                </div>
-              </div>
+              <div id="feedbackArea" class="feedback-area" style="margin-bottom:20px"></div>
+              
               <!-- ─── וולדמורט בטל ─── -->
-              <div id="voldemortPanel" class="voldemort-panel hidden">
+              <div id="voldemortPanel" class="voldemort-panel hidden" style="margin-top:auto">
                 <div class="voldemort-header">
                   <div class="voldemort-avatar" id="voldemortAvatar">🐍</div>
                   <div class="voldemort-title">
@@ -283,12 +261,28 @@
                 </div>
                 <div id="voldemortResult" class="voldemort-result hidden"></div>
               </div>
-              <div class="coach-card">
+              
+              <div class="coach-card" style="margin-top:auto">
                 <p class="panel-kicker">🦉 פרופסור מדריך</p>
                 <h3 id="coachName">פרופ׳ הוגוורטס</h3>
                 <p id="coachMessage">
                   קודם מוצאים בסיס. אחר כך בודקים מאיזה קודקוד צריך לצאת הגובה.
                 </p>
+              </div>
+            </section>
+
+            <section class="panel question-panel">
+              <div class="canvas-shell">
+                <canvas id="gameCanvas" width="900" height="580"></canvas>
+                <div id="hintPulse" class="hint-pulse hidden"></div>
+              </div>
+              <div class="question-toolbar" style="justify-content:space-between">
+                <div id="angleReadout" class="angle-readout">זווית מול הבסיס: --</div>
+                <div class="toolbar-buttons">
+                  <button id="checkAnswer" class="primary-button">✨ בדיקה לחש</button>
+                  <button id="undoAction" class="secondary-button hidden">Undo ↩</button>
+                  <button id="hintButton" class="ghost-button">💡 רמז</button>
+                </div>
               </div>
             </section>
           </div>

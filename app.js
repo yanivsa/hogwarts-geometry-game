@@ -61,6 +61,7 @@ const refs = {
   sandboxShowAltitudes: document.getElementById("sandboxShowAltitudes"),
   sandboxText: document.getElementById("sandboxText"),
   sandboxBack: document.getElementById("sandboxBack"),
+  skipQuestion: document.getElementById("skipQuestion"),
 };
 
 const ctx = refs.gameCanvas.getContext("2d");
@@ -91,6 +92,7 @@ const appState = {
   challengeQuestions: [],
   challengeScore: 0,
   lastAnswerCorrect: false,
+  lives: 3,
   supportMode: false,
   supportCategory: null,
   supportNextStageIndex: null,
@@ -285,6 +287,16 @@ function bindEvents() {
   refs.checkAnswer.addEventListener("click", checkCurrentAnswer);
   refs.undoAction.addEventListener("click", undoAction);
   refs.hintButton.addEventListener("click", () => revealHint(true));
+
+  if (refs.skipQuestion) {
+    refs.skipQuestion.addEventListener("click", () => {
+      if (!appState.currentQuestion) return;
+      appState.lastAnswerCorrect = false; 
+      clearHintTimer();
+      stopLightningTimer();
+      advanceQuestion();
+    });
+  }
 
   // Back to start button on map screen
   const backToStartFromMap = document.getElementById("backToStartFromMap");
@@ -488,7 +500,7 @@ function startStage(index) {
 
 function formatHPLore(text, q) {
   if (!text || !q) return text;
-  const labels = ['A', 'B', 'C', 'D'];
+  const labels = q.shape?.labels || ['א', 'ב', 'ג', 'ד'];
   const shapeLen = q.shape?.points?.length || 3;
 
   const base = q.baseSide;
@@ -503,6 +515,7 @@ function formatHPLore(text, q) {
           formatted += ` (קודקוד ${vtxText} ← בסיס ${baseText})`;
       }
   }
+
 
   if (q.img) {
       formatted = `<div class="question-img-container"><img src="${q.img}" class="question-img" alt="Magic Item"/></div>` + formatted;
@@ -537,10 +550,10 @@ function loadQuestion() {
   refs.stageGoal.textContent = stage.goal;
   refs.stageCounter.textContent = `שאלה ${appState.questionIndex + 1} / ${appState.stageQuestions.length}`;
   
-  refs.questionPrompt.textContent = formatHPLore(q.prompt, q);
+  refs.questionPrompt.innerHTML = formatHPLore(q.prompt, q);
   refs.questionStory.innerHTML = formatHPLore(q.story || stage.story, q);
   refs.coachName.textContent = q.coachName || "פרופ׳ דמבלדור";
-  refs.coachMessage.textContent = formatHPLore(q.coach || stage.coach, q);
+  refs.coachMessage.innerHTML = formatHPLore(q.coach || stage.coach, q);
 
   // Voldemort Boss logic injection Point
   if (typeof updateVoldemortPanel === "function") {
@@ -679,6 +692,81 @@ function renderQuestionCanvas() {
   ctx.clearRect(0, 0, refs.gameCanvas.width, refs.gameCanvas.height);
   const q = appState.currentQuestion;
   if (!q) return;
+
+  try {
+    drawCanvasBackground(ctx, refs.gameCanvas.width, refs.gameCanvas.height);
+    const render = buildRenderModel(q);
+    appState.currentRender = render;
+    const shapeColor = "#a78bfa";
+
+    drawShape(ctx, render, shapeColor);
+    drawBase(ctx, render);
+    if (q.allowExtension) {
+      drawExtension(ctx, render.baseLine);
+    }
+
+    if (q.kind === "select-altitude") {
+      render.candidateLines.forEach((line, index) => {
+        drawCandidateLine(ctx, line, index === appState.selectedCandidate, index === q.correctIndex && appState.answered);
+      });
+    }
+
+    if (q.kind === "reverse-base") {
+      drawLine(ctx, render.shownLine, "#e14d6f", 5);
+      drawRightAngleMarker(ctx, render.shownLine, render.baseLine, "#ff9f43");
+      render.sideSegments.forEach((side, index) => {
+        if (index === appState.selectedSide) {
+          drawSideHighlight(ctx, side);
+        }
+      });
+    }
+
+    if (q.kind === "choice" || q.kind === "fix-mistake" || q.kind === "reason-text") {
+      if (render.shownLine) {
+        drawLine(ctx, render.shownLine, q.kind === "fix-mistake" ? "#c1677b" : "#e14d6f", 5, q.kind === "fix-mistake");
+      }
+      if (q.showRightAngle) {
+        drawRightAngleMarker(ctx, render.shownLine, render.baseLine, "#ff9f43");
+      }
+    }
+
+    if (q.kind === "draw-altitude") {
+      if (appState.studentLine) {
+        const line = {
+          p1: render.scaledPoints[appState.studentLine.fromIndex],
+          p2: appState.studentLine.to,
+        };
+        drawLine(ctx, line, "#f59e0b", 5);
+        const angle = perpendicularDifference(render.baseLine, line);
+        refs.angleReadout.textContent = `זווית מול הבסיס: ${Math.round(90 - angle)}°`;
+        if (angle <= DRAW_TOLERANCE_BY_STAGE[appState.stageIndex]) {
+          drawRightAngleMarker(ctx, line, render.baseLine, "#00c878");
+        }
+      }
+    }
+
+    if (q.kind === "choice" || q.kind === "fix-mistake" || q.kind === "reason-text" || q.kind === "draw-altitude") {
+      if (q.baseSide !== undefined) {
+        drawSideLabels(ctx, render);
+      }
+    }
+
+    drawVertexLabels(ctx, render.scaledPoints, q.shape.labels);
+  } catch (err) {
+    console.error("Canvas Render Error:", err);
+    ctx.fillStyle = "rgba(40, 25, 80, 0.9)";
+    ctx.fillRect(0, 0, refs.gameCanvas.width, refs.gameCanvas.height);
+    ctx.fillStyle = "#ff5555";
+    ctx.font = '700 20px "Alef", sans-serif';
+    ctx.fillText("שגיאה בהצגת הגרפיקה:", 20, 50);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = '14px monospace';
+    ctx.fillText(err.toString(), 20, 80);
+    if (err.stack) {
+       ctx.fillText(err.stack.split("\\n")[1] || "", 20, 110);
+    }
+  }
+}
 
   drawCanvasBackground(ctx, refs.gameCanvas.width, refs.gameCanvas.height);
   const render = buildRenderModel(q);
@@ -1046,7 +1134,7 @@ function revealHint(fromButton) {
 
 function setCoach(name, message) {
   refs.coachName.textContent = name;
-  refs.coachMessage.textContent = message;
+  refs.coachMessage.innerHTML = message;
 }
 
 function updateMetrics() {
