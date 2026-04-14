@@ -2239,3 +2239,50 @@ function buildStages() {
     },
   ];
 }
+
+function updateLivesDisplay() {
+  const livesEl = document.getElementById("playerLives");
+  if (livesEl) {
+    if (appState.lives > 0) {
+      livesEl.textContent = "❤️".repeat(appState.lives);
+    } else {
+      livesEl.textContent = "💔";
+    }
+  }
+}
+
+function startLightningTimer(seconds) {
+  stopLightningTimer();
+  let timeLeft = seconds;
+  const container = document.getElementById("lightningBarContainer");
+  const fill = document.getElementById("lightningBarFill");
+  
+  if (container && fill) {
+    container.classList.remove("hidden");
+    fill.style.width = "100%";
+    
+    appState.lightningTimerId = setInterval(() => {
+      timeLeft -= 0.1;
+      const percentage = Math.max(0, (timeLeft / seconds) * 100);
+      fill.style.width = percentage + "%";
+      
+      if (timeLeft <= 0) {
+        stopLightningTimer();
+        if (!appState.answered && typeof finalizeAnswer === "function") {
+          finalizeAnswer(false, true);
+        }
+      }
+    }, 100);
+  }
+}
+
+function stopLightningTimer() {
+  if (appState.lightningTimerId) {
+    clearInterval(appState.lightningTimerId);
+    appState.lightningTimerId = null;
+  }
+  const container = document.getElementById("lightningBarContainer");
+  if (container) {
+    container.classList.add("hidden");
+  }
+}
