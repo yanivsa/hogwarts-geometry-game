@@ -20,6 +20,7 @@ const refs = {
   diagnosticCard: document.getElementById("diagnosticCard"),
   diagnosticProgress: document.getElementById("diagnosticProgress"),
   mapGrid: document.getElementById("mapGrid"),
+  mapSearch: document.getElementById("mapSearch"),
   stageEyebrow: document.getElementById("stageEyebrow"),
   stageTitle: document.getElementById("stageTitle"),
   stageGoal: document.getElementById("stageGoal"),
@@ -252,11 +253,30 @@ function initialize() {
 
 function bindEvents() {
   refs.startGame.addEventListener("click", () => showScreen("screenWand"));
+  const openMapFromHero = document.getElementById("openMapFromHero");
+  if (openMapFromHero) {
+    openMapFromHero.addEventListener("click", () => showMap());
+  }
+  const skipWand = document.getElementById("skipWand");
+  if (skipWand) {
+    skipWand.addEventListener("click", () => startFlow());
+  }
+  const skipDiagnostic = document.getElementById("skipDiagnostic");
+  if (skipDiagnostic) {
+    skipDiagnostic.addEventListener("click", () => {
+      appState.progress.diagnosticCompleted = true;
+      saveProgress();
+      showMap();
+    });
+  }
   refs.startSandbox.addEventListener("click", () => {
     showScreen("screenSandbox");
     renderSandbox();
   });
   refs.openMap.addEventListener("click", () => showMap());
+  if (refs.mapSearch) {
+    refs.mapSearch.addEventListener("input", () => renderMap(refs.mapSearch.value));
+  }
   refs.soundToggle.addEventListener("click", toggleSound);
   refs.resetProgress.addEventListener("click", resetProgress);
   refs.backToMap.addEventListener("click", showMap);
@@ -380,14 +400,20 @@ function finishDiagnostic() {
 
 function showMap() {
   if (appState.challengeTimerId) stopChallengeTimer();
+  if (refs.mapSearch) refs.mapSearch.value = "";
   renderMap();
   showScreen("screenMap");
 }
 
-function renderMap() {
+function renderMap(filter = "") {
   refs.mapGrid.innerHTML = "";
   const HP_ICONS = ["⚡","🧙","🪄","📚","🦉","🏰","🌟","✨","🔮","🏆"];
+  const lowerFilter = filter.toLowerCase();
+
   STAGES.forEach((stage, index) => {
+    if (filter && !stage.title.toLowerCase().includes(lowerFilter) && !stage.goal.toLowerCase().includes(lowerFilter)) {
+      return;
+    }
     const complete = appState.progress.completedStages.includes(index);
     const isCurrent = index === appState.progress.currentStage;
     const isLocked = index > appState.progress.unlockedStage;

@@ -259,6 +259,35 @@ body {
 .achievement-item strong { display: block; font-size: 0.95rem; color: var(--text-bright); }
 .achievement-item span { display: block; font-size: 0.79rem; color: var(--muted); }
 
+.map-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.search-input {
+  background: rgba(40, 25, 80, 0.6);
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  border-radius: 12px;
+  padding: 8px 16px;
+  color: var(--text-bright);
+  font-family: inherit;
+  width: 240px;
+  transition: all 0.2s ease;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 12px rgba(245, 200, 66, 0.2);
+  width: 300px;
+}
+
+.search-input::placeholder {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
 /* ── Screens ── */
 .screen { display: none; flex-direction: column; gap: 18px; }
 .screen.active { display: flex; }

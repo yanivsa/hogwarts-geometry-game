@@ -100,10 +100,11 @@
             <div>
               <p class="panel-kicker">🪄 בנה את שרביטך לפני הקרב</p>
               <h2>השרביט הוגוורטס שלך</h2>
-              <p>השרביט הוא כלי הנשק שלך מול וולדמורט. כל שלב שתנצח – השרביט ישתדרג. בחר בחוכמה!</p>
+              <p>בחר 🌳 עץ ו-✨ גרעין כדי להפעיל את השרביט ולצאת לקרב!</p>
             </div>
             <div class="hero-actions">
               <button id="confirmWand" class="primary-button wand-ready-btn" disabled>🪄 קבל את השרביט ← צא לקרב!</button>
+              <button id="skipWand" class="ghost-button">דלג על העיצוב</button>
             </div>
           </div>
           <div class="wand-designer">
@@ -141,7 +142,8 @@
             </div>
             <div class="hero-actions">
               <button id="startGame" class="primary-button">⚡ Expelliarmus – לעצב את השרביט!</button>
-              <button id="startSandbox" class="secondary-button">🔬 חדר הניסויים</button>
+              <button id="openMapFromHero" class="secondary-button">🗺️ מפת השיעורים</button>
+              <button id="startSandbox" class="ghost-button">🔬 חדר הניסויים</button>
             </div>
           </div>
           <div class="start-grid">
@@ -172,7 +174,10 @@
               <p class="panel-kicker">🎓 בחינת כניסה להוגוורטס</p>
               <h2>4 שאלות מהירות לפני השיעור</h2>
             </div>
-            <div id="diagnosticProgress" class="stage-chip">0 / 4</div>
+            <div class="diagnostic-actions" style="display:flex; align-items:center; gap:12px;">
+              <button id="skipDiagnostic" class="ghost-button small">דלג על המבחן ⏭️</button>
+              <div id="diagnosticProgress" class="stage-chip">0 / 4</div>
+            </div>
           </div>
           <div id="diagnosticCard" class="choice-card"></div>
         </section>
@@ -183,7 +188,10 @@
               <p class="panel-kicker">🗺️ מפת שיעורי הלחשים</p>
               <h2>בחר שיעור – כל השיעורים פתוחים! 🔓</h2>
             </div>
-            <button id="backToStartFromMap" class="ghost-button small">← בית</button>
+            <div class="map-actions">
+              <input type="text" id="mapSearch" placeholder="חפש שיעור... (למשל: משולש, גובה)" class="search-input" />
+              <button id="backToStartFromMap" class="ghost-button small">← בית</button>
+            </div>
           </div>
           <div id="mapGrid" class="map-grid"></div>
         </section>
@@ -375,6 +383,5 @@
       </section>
     </main>
 
-    <script src="./app.js"></script>
   </body>
 </html>
