@@ -406,7 +406,9 @@ function showMap() {
 }
 
 function renderMap(filter = "") {
-  refs.mapGrid.innerHTML = "";
+  const container = refs.mapGrid;
+  container.innerHTML = "";
+  const fragment = document.createDocumentFragment();
   const HP_ICONS = ["⚡","🧙","🪄","📚","🦉","🏰","🌟","✨","🔮","🏆"];
   const lowerFilter = filter.toLowerCase();
 
@@ -418,11 +420,10 @@ function renderMap(filter = "") {
     const isCurrent = index === appState.progress.currentStage;
     const isLocked = index > appState.progress.unlockedStage;
     const icon = HP_ICONS[index] || (stage.family === "parallelogram" ? "▱" : "△");
-    // All stages are CLICKABLE - locked ones show as dimmed but still work
     const status = complete ? "✅ הושלם" : isCurrent ? "▶ ממשיכים כאן" : isLocked ? "🔓 פתוח לדילוג" : "⭕ פתוח";
+    
     const node = document.createElement("button");
     node.className = `stage-node ${isLocked ? "locked" : ""} ${complete ? "complete" : ""} ${isCurrent ? "current" : ""}`;
-    // NO disabled attribute - all stages are accessible
     node.innerHTML = `
       <span class="stage-node-icon" aria-hidden="true">${icon}</span>
       <strong>שיעור ${index + 1}</strong>
@@ -430,9 +431,13 @@ function renderMap(filter = "") {
       <small>${stage.goal}</small>
       <span class="stage-node-status">${status}</span>
     `;
-    node.addEventListener("click", () => startStage(index));
-    refs.mapGrid.appendChild(node);
+    node.addEventListener("click", (e) => {
+      e.preventDefault();
+      startStage(index);
+    });
+    fragment.appendChild(node);
   });
+  container.appendChild(fragment);
 }
 
 function renderMiniMap() {
@@ -446,21 +451,39 @@ function renderMiniMap() {
 }
 
 function startStage(index) {
-  stopChallengeTimer();
-  stopLightningTimer();
-  appState.challengeMode = false;
-  appState.stageIndex = index;
-  appState.progress.currentStage = index;
-  const stage = STAGES[index];
-  appState.stageQuestions = buildStageQuestionSet(stage, index, appState.progress.skipWarmup && index === 0);
-  appState.questionIndex = 0;
-  appState.stageMetrics = createMetricState();
-  appState.progress.skipWarmup = false;
-  appState.lives = appState.challengeMode ? 1 : 3; // 1 life in challenge, 3 in normal
-  updateLivesDisplay();
-  saveProgress();
-  loadQuestion();
-  showScreen("screenGame");
+  try {
+    stopChallengeTimer();
+    stopLightningTimer();
+    
+    if (index < 0 || index >= STAGES.length) {
+      showMap();
+      return;
+    }
+
+    appState.challengeMode = false;
+    appState.stageIndex = index;
+    appState.progress.currentStage = index;
+    
+    const stage = STAGES[index];
+    appState.stageQuestions = buildStageQuestionSet(stage, index, appState.progress.skipWarmup && index === 0);
+    appState.questionIndex = 0;
+    appState.stageMetrics = createMetricState();
+    appState.progress.skipWarmup = false;
+    appState.lives = 3; 
+    
+    updateLivesDisplay();
+    saveProgress();
+    
+    // UI Change should happen BEFORE loadQuestion for proper canvas layout
+    showScreen("screenGame");
+    
+    setTimeout(() => {
+      loadQuestion();
+    }, 10);
+  } catch (err) {
+    console.error("Critical error starting stage:", err);
+    showMap();
+  }
 }
 
 function formatHPLore(text, q) {
@@ -1325,30 +1348,36 @@ function ratio(metric) {
   return metric.correct / metric.total;
 }
 
-function drawCanvasBackground(targetCtx, width, height) {
-  targetCtx.clearRect(0, 0, width, height);
-  // Dark magical background
-  const gradient = targetCtx.createLinearGradient(0, 0, 0, height);
-  gradient.addColorStop(0, "rgba(16, 12, 36, 0.97)");
-  gradient.addColorStop(1, "rgba(10, 8, 25, 0.95)");
-  targetCtx.fillStyle = gradient;
-  targetCtx.fillRect(0, 0, width, height);
+let bgCacheCanvas = null;
 
-  // Subtle star grid - one single path for performance
-  targetCtx.save();
-  targetCtx.strokeStyle = "rgba(100, 70, 180, 0.08)";
-  targetCtx.lineWidth = 1;
-  targetCtx.beginPath();
-  for (let x = 0; x <= width; x += 50) {
-    targetCtx.moveTo(x, 0);
-    targetCtx.lineTo(x, height);
+function drawCanvasBackground(targetCtx, width, height) {
+  if (!bgCacheCanvas || bgCacheCanvas.width !== width || bgCacheCanvas.height !== height) {
+    bgCacheCanvas = document.createElement("canvas");
+    bgCacheCanvas.width = width;
+    bgCacheCanvas.height = height;
+    const c = bgCacheCanvas.getContext("2d");
+    
+    const gradient = c.createLinearGradient(0, 0, 0, height);
+    gradient.addColorStop(0, "rgba(16, 12, 36, 0.97)");
+    gradient.addColorStop(1, "rgba(10, 8, 25, 0.95)");
+    c.fillStyle = gradient;
+    c.fillRect(0, 0, width, height);
+
+    c.strokeStyle = "rgba(100, 70, 180, 0.08)";
+    c.lineWidth = 1;
+    c.beginPath();
+    for (let x = 0; x <= width; x += 50) {
+      c.moveTo(x, 0);
+      c.lineTo(x, height);
+    }
+    for (let y = 0; y <= height; y += 50) {
+      c.moveTo(0, y);
+      c.lineTo(width, y);
+    }
+    c.stroke();
   }
-  for (let y = 0; y <= height; y += 50) {
-    targetCtx.moveTo(0, y);
-    targetCtx.lineTo(width, y);
-  }
-  targetCtx.stroke();
-  targetCtx.restore();
+  
+  targetCtx.drawImage(bgCacheCanvas, 0, 0);
 }
 
 function drawShape(targetCtx, render, strokeStyle) {
