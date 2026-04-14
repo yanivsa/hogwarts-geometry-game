@@ -3,49 +3,52 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>אורי והגשר האווירי בבית הספר לקסם</title>
+    <title>אקדמיית הוגוורטס לגאומטריה ⚡ גבהים</title>
+    <meta name="description" content="משחק לימודי לכיתה ה׳ בסגנון הארי פוטר – לומדים גובה במשולש ובמקבילית" />
     <link
       rel="icon"
-      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%2329498f'/%3E%3Cpath d='M10 46 L24 22 L36 40 L46 18 L54 46' stroke='%23f2c45d' stroke-width='5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='46' cy='18' r='5' fill='%23fff3c4'/%3E%3C/svg%3E"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231a0a40'/%3E%3Ctext x='8' y='50' font-size='48' font-family='sans-serif'%3E⚡%3C/text%3E%3C/svg%3E"
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Alef:wght@400;700&family=Rubik:wght@400;500;700;800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Alef:wght@400;700&family=Rubik:wght@400;500;700;800&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="boss_styles.css" />
+    <script defer src="geometry.js"></script>
+    <script defer src="hp_boss.js"></script>
+    <script defer src="app.js"></script>
   </head>
   <body>
     <div class="sky">
-      <div class="sun-glow"></div>
+      <div class="stars"></div>
       <div class="magic-dust dust-a"></div>
       <div class="magic-dust dust-b"></div>
       <div class="magic-dust dust-c"></div>
-      <div class="cloud cloud-a"></div>
-      <div class="cloud cloud-b"></div>
-      <div class="cloud cloud-c"></div>
     </div>
 
     <header class="topbar">
       <div>
-        <p class="eyebrow">משימת גאומטריה בבית ספר לקסם</p>
-        <h1>אורי והגשר האווירי בבית הספר לקסם</h1>
+        <p class="eyebrow">⚡ אקדמיית הוגוורטס לגאומטריה</p>
+        <h1>הצלמונית הקסומה: לחשי הגבהים</h1>
       </div>
       <div class="topbar-actions">
-        <button id="soundToggle" class="ghost-button">צליל: פועל</button>
-        <button id="resetProgress" class="ghost-button danger">איפוס התקדמות</button>
+        <button id="soundToggle" class="ghost-button">🔊 קסם קולי</button>
+        <button id="resetProgress" class="ghost-button danger">🔄 איפוס</button>
       </div>
     </header>
 
     <main class="layout">
       <aside class="sidebar">
         <section class="panel story-panel">
-          <p class="panel-kicker">ספר הלחשים</p>
-          <h2 id="storyTitle">גשר הכישוף הראשי קרס</h2>
+          <p class="panel-kicker">📖 ספר הלחשים הגדול</p>
+          <h2 id="storyTitle">🏰 הגשר הקסום קרס!</h2>
           <p id="storyText">
-            כל שלב מחזיר לחיים קטע חדש בגשר המעופף. כדי להפעיל את לחשי היציבות
-            ולצבור נקודות לבית, צריך לזהות ולשרטט גבהים נכון.
+            הגשר שמחבר את מגדל גריפינדור לחדרי הלימוד קרס בגלל לחש רע.
+            רק ידיעה מושלמת של גבהים תחזיר אותו! כל שלב שתפתור יחזיר קטע
+            נוסף לגשר הקסום.
           </p>
           <div class="bridge-progress">
             <div id="bridgeFill" class="bridge-fill"></div>
@@ -55,17 +58,17 @@
         <section class="panel">
           <div class="panel-heading">
             <div>
-              <p class="panel-kicker">מפת התקדמות</p>
-              <h2>10 תחנות</h2>
+              <p class="panel-kicker">🗺️ מפת הוגוורטס</p>
+              <h2>10 שיעורי לחשים</h2>
             </div>
-            <button id="openMap" class="ghost-button small">פתח</button>
+            <button id="openMap" class="ghost-button small">↗ מפה</button>
           </div>
           <div id="miniMap" class="mini-map"></div>
         </section>
 
         <section class="panel">
-          <p class="panel-kicker">מונחים</p>
-          <h2>עברית + אנגלית</h2>
+          <p class="panel-kicker">✨ ספר הלחשים במילים</p>
+          <h2>מונחי גאומטריה</h2>
           <ul class="terms-list">
             <li><span>גובה</span><strong>altitude</strong></li>
             <li><span>קודקוד</span><strong>vertex</strong></li>
@@ -75,46 +78,80 @@
         </section>
 
         <section class="panel">
-          <p class="panel-kicker">הישגים</p>
-          <h2>לוח אישי</h2>
+          <p class="panel-kicker">🏆 הענקת תגים</p>
+          <h2>הישגי הקסם שלי</h2>
           <div id="achievementList" class="achievement-list"></div>
         </section>
       </aside>
 
       <section class="main-stage">
+        <!-- ─── מסך עיצוב שרביט ─── -->
+        <section id="screenWand" class="screen">
+          <div class="hero-card">
+            <div>
+              <p class="panel-kicker">🪄 בנה את שרביטך לפני הקרב</p>
+              <h2>השרביט הוגוורטס שלך</h2>
+              <p>השרביט הוא כלי הנשק שלך מול וולדמורט. כל שלב שתנצח – השרביט ישתדרג. בחר בחוכמה!</p>
+            </div>
+            <div class="hero-actions">
+              <button id="confirmWand" class="primary-button wand-ready-btn" disabled>🪄 קבל את השרביט ← צא לקרב!</button>
+            </div>
+          </div>
+          <div class="wand-designer">
+            <div class="wand-section">
+              <h3>🌳 עץ השרביט</h3>
+              <div class="wand-choices" id="wandWoodChoices"></div>
+            </div>
+            <div class="wand-section">
+              <h3>✨ גרעין השרביט</h3>
+              <div class="wand-choices" id="wandCoreChoices"></div>
+            </div>
+            <div class="wand-preview panel" id="wandPreview" style="display:none">
+              <div class="wand-display">
+                <div class="wand-icon-big" id="wandIconBig">🪄</div>
+                <div>
+                  <p class="panel-kicker" id="wandName">השרביט שלך</p>
+                  <p id="wandDesc">בחר עץ וגרעין כדי לראות את שרביטך...</p>
+                </div>
+              </div>
+              <div class="wand-power" id="wandPower"></div>
+            </div>
+          </div>
+        </section>
+
         <section id="screenStart" class="screen active">
           <div class="hero-card">
             <div>
-              <p class="panel-kicker">סיפור המסגרת</p>
-              <h2>בונים מחדש גשר כשפים בעזרת גבהים לכיתה ה׳</h2>
+              <p class="panel-kicker">⚡ ברוכים הבאים להוגוורטס</p>
+              <h2>הגשר הקסום של מגדל גריפינדור</h2>
               <p>
-                כדי לחבר מחדש את בית הספר לקסם לעננים, אורי צריך לפתור שאלות על
-                גובה במשולש ובמקבילית. האווירה היא של פנימיית קסם והרפתקה, אבל
-                המטרה נשארת לימודית ומדויקת: הכנה למבחן בכיתה ה׳.
+                דמבלדור מסר משימה: הגשר שמחבר את המגדלים קרס בגלל לחש שחור!
+                כדי לתקן אותו, צריך ידיעה מושלמת של גבהים – במשולשים, במקביליות,
+                ואפילו בגבהים חיצוניים. רק קוסם אמיתי יוכל להציל את הוגוורטס! 🪄
               </p>
             </div>
             <div class="hero-actions">
-              <button id="startGame" class="primary-button">מתחילים בכישוף</button>
-              <button id="startSandbox" class="secondary-button">חדר ניסויים</button>
+              <button id="startGame" class="primary-button">⚡ Expelliarmus – לעצב את השרביט!</button>
+              <button id="startSandbox" class="secondary-button">🔬 חדר הניסויים</button>
             </div>
           </div>
           <div class="start-grid">
             <article class="info-card">
-              <p class="panel-kicker">מה מחייב</p>
+              <p class="panel-kicker">📚 מה לומדים</p>
               <ul>
-                <li>זיהוי גובה נכון ולא נכון</li>
-                <li>שרטוט גבהים במשולשים שונים</li>
-                <li>גובה במקבילית לפי בסיס</li>
-                <li>בסיס, מאונך והמשך צלע</li>
+                <li>🎯 זיהוי גובה נכון ולא נכון</li>
+                <li>✏️ שרטוט גבהים במשולשים</li>
+                <li>▱ גובה במקבילית לפי בסיס</li>
+                <li>↗ בסיס, מאונך והמשך צלע</li>
               </ul>
             </article>
             <article class="info-card">
-              <p class="panel-kicker">מה מיוחד כאן</p>
+              <p class="panel-kicker">✨ מה מיוחד כאן</p>
               <ul>
-                <li>משוב מיידי עם הסבר</li>
-                <li>רמזים פסיביים אחרי השהיה</li>
-                <li>מצב אתגר בשלבים מתקדמים</li>
-                <li>חדר ניסויים לחקירה חופשית</li>
+                <li>⚡ משוב מיידי עם הסבר</li>
+                <li>💡 רמזים קסומים אחרי השהיה</li>
+                <li>🏆 ניתן לדלג בין שלבים!</li>
+                <li>🔬 חדר ניסויים לחקירה חופשית</li>
               </ul>
             </article>
           </div>
@@ -123,8 +160,8 @@
         <section id="screenDiagnostic" class="screen">
           <div class="stage-header">
             <div>
-              <p class="panel-kicker">אבחון עגינה</p>
-              <h2>4 שאלות מהירות לפני תחילת המשחק</h2>
+              <p class="panel-kicker">🎓 בחינת כניסה להוגוורטס</p>
+              <h2>4 שאלות מהירות לפני השיעור</h2>
             </div>
             <div id="diagnosticProgress" class="stage-chip">0 / 4</div>
           </div>
@@ -134,9 +171,10 @@
         <section id="screenMap" class="screen">
           <div class="stage-header">
             <div>
-              <p class="panel-kicker">מפת הכשפים</p>
-              <h2>בחר תחנה פתוחה</h2>
+              <p class="panel-kicker">🗺️ מפת שיעורי הלחשים</p>
+              <h2>בחר שיעור – כל השיעורים פתוחים! 🔓</h2>
             </div>
+            <button id="backToStartFromMap" class="ghost-button small">← בית</button>
           </div>
           <div id="mapGrid" class="map-grid"></div>
         </section>
@@ -144,7 +182,7 @@
         <section id="screenGame" class="screen">
           <div class="stage-header">
             <div>
-              <p class="panel-kicker" id="stageEyebrow">שלב 1</p>
+              <p class="panel-kicker" id="stageEyebrow">⚡ שיעור 1</p>
               <h2 id="stageTitle">מהו גובה</h2>
               <p id="stageGoal" class="stage-goal"></p>
             </div>
@@ -156,10 +194,6 @@
 
           <div class="game-grid">
             <section class="panel question-panel">
-              <div class="question-topline">
-                <p id="questionPrompt" class="question-prompt"></p>
-                <p id="questionStory" class="question-story"></p>
-              </div>
               <div class="canvas-shell">
                 <canvas id="gameCanvas" width="900" height="580"></canvas>
                 <div id="hintPulse" class="hint-pulse hidden"></div>
@@ -172,6 +206,13 @@
                   <button id="hintButton" class="ghost-button">רמז</button>
                 </div>
               </div>
+            </section>
+
+            <section class="panel interaction-panel">
+              <div class="question-topline">
+                <p id="questionPrompt" class="question-prompt"></p>
+                <p id="questionStory" class="question-story"></p>
+              </div>
               <div id="choiceArea" class="choice-area"></div>
               <div id="feedbackArea" class="feedback-area"></div>
             </section>
@@ -179,10 +220,10 @@
             <section class="panel side-panel">
               <div class="panel-heading">
                 <div>
-                  <p class="panel-kicker">שליטה במשימה</p>
+                  <p class="panel-kicker">🧙 שליטה בלחש</p>
                   <h2>מצב נוכחי</h2>
                 </div>
-                <button id="backToMap" class="ghost-button small">מפת כשפים</button>
+                <button id="backToMap" class="ghost-button small">🗺️ מפה</button>
               </div>
               <div class="metric-list">
                 <div class="metric-row">
@@ -198,9 +239,24 @@
                   <strong id="metricReason">0 / 0</strong>
                 </div>
               </div>
+              <!-- ─── וולדמורט בטל ─── -->
+              <div id="voldemortPanel" class="voldemort-panel hidden">
+                <div class="voldemort-header">
+                  <div class="voldemort-avatar" id="voldemortAvatar">🐍</div>
+                  <div class="voldemort-title">
+                    <span class="vol-name">לורד וולדמורט</span>
+                    <span class="vol-score" id="volScore">אויב: 0 | אתה: 0</span>
+                  </div>
+                </div>
+                <div class="voldemort-speech">
+                  <p class="panel-kicker">⚡ וולדמורט טוען:</p>
+                  <p id="voldemortClaim">מחכה לשאלה...</p>
+                </div>
+                <div id="voldemortResult" class="voldemort-result hidden"></div>
+              </div>
               <div class="coach-card">
-                <p class="panel-kicker">מלווה פעיל</p>
-                <h3 id="coachName">הכבשה</h3>
+                <p class="panel-kicker">🦉 פרופסור מדריך</p>
+                <h3 id="coachName">פרופ׳ הוגוורטס</h3>
                 <p id="coachMessage">
                   קודם מוצאים בסיס. אחר כך בודקים מאיזה קודקוד צריך לצאת הגובה.
                 </p>
@@ -211,8 +267,8 @@
 
         <section id="screenSummary" class="screen">
           <div class="summary-card">
-            <p class="panel-kicker">סיכום שלב</p>
-            <h2 id="summaryTitle">קטע גשר הושלם</h2>
+            <p class="panel-kicker">⚡ סיכום שיעור הקסם</p>
+            <h2 id="summaryTitle">🏰 קטע גשר הושלם</h2>
             <div class="summary-score">
               <div>
                 <span>ציון שלב</span>
@@ -241,11 +297,25 @@
               <strong id="summaryWeakness">--</strong>
             </div>
           </div>
+          <div id="bossDefeatCard" class="boss-defeat-card hidden">
+            <div class="boss-defeat-header">
+              <span id="bossDefeatIcon">⚡</span>
+              <div>
+                <p class="panel-kicker" id="bossDefeatLabel">תוצאת הקרב</p>
+                <h3 id="bossDefeatTitle">וולדמורט הובס!</h3>
+              </div>
+            </div>
+            <p id="bossDefeatDesc">הנצחת את וולדמורט בשלב זה!</p>
+            <div id="wandUpgradeCard" class="wand-upgrade-card hidden">
+              <p class="panel-kicker">🪄 שדרוג שרביט</p>
+              <p id="wandUpgradeDesc"></p>
+            </div>
+          </div>
           <div id="summaryVictory" class="victory-card hidden"></div>
           <div id="summaryChallenge" class="challenge-card hidden"></div>
           <div class="summary-actions">
-            <button id="nextStage" class="primary-button">לשלב הבא</button>
-            <button id="goToMapFromSummary" class="secondary-button">חזרה למפה</button>
+            <button id="nextStage" class="primary-button">⚡ לשיעור הבא</button>
+            <button id="goToMapFromSummary" class="secondary-button">🗺️ חזרה למפה</button>
           </div>
           </div>
         </section>
@@ -253,13 +323,13 @@
         <section id="screenSandbox" class="screen">
           <div class="stage-header">
             <div>
-              <p class="panel-kicker">חדר ניסויים</p>
-              <h2>חקירה חופשית באקדמיית הקסם</h2>
+              <p class="panel-kicker">🔬 מעבדת הגאומטריה הקסומה</p>
+              <h2>חקירה חופשית בהוגוורטס</h2>
               <p class="stage-goal">
-                בחר צורה, לחץ על בסיס, ואז ראה איך הגובה משתנה.
+                בחר צורה, לחץ על צלע לבחירת בסיס, ואז לחץ הראה גבהים.
               </p>
             </div>
-            <button id="sandboxBack" class="ghost-button">חזרה</button>
+            <button id="sandboxBack" class="ghost-button">← חזרה</button>
           </div>
           <div class="game-grid">
             <section class="panel question-panel">
@@ -278,11 +348,11 @@
             </section>
             <section class="panel side-panel">
               <div class="coach-card">
-                <p class="panel-kicker">איך עובדים כאן</p>
-                <h3>כלי חקירה</h3>
+                <p class="panel-kicker">🦉 מדריך הניסויים</p>
+                <h3>איך עובדים</h3>
                 <p id="sandboxText">
                   לחץ על צלע כדי לבחור בסיס. לאחר מכן לחץ על "הראה גבהים" כדי
-                  לראות את הגובה או הגבהים המתאימים.
+                  לראות את גבהי הכישוף המתאימים לאותו בסיס.
                 </p>
               </div>
             </section>
