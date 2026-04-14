@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <path d="M35 30 L65 30 L70 80 Q 70 90 50 90 Q 30 90 30 80 Z" fill="#4caf50" opacity="0.8" />
+  <path d="M40 10 L60 10 L60 30 L40 30 Z" fill="#90caf9" opacity="0.5" />
+  <circle cx="45" cy="60" r="4" fill="white" opacity="0.6">
+    <animate attributeName="cy" values="60;40;60" dur="2s" repeatCount="indefinite" />
+  </circle>
+  <circle cx="55" cy="70" r="3" fill="white" opacity="0.4">
+    <animate attributeName="cy" values="70;50;70" dur="2.5s" repeatCount="indefinite" />
+  </circle>
+</svg>

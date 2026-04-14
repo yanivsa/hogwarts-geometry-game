@@ -44,9 +44,13 @@ function initWandDesigner() {
   });
 
   document.getElementById("confirmWand").onclick = () => {
-    document.getElementById("screenWand").classList.remove("active");
-    // Show original start screen
-    document.getElementById("screenStart").classList.add("active");
+    // Show original start screen properly using global router
+    if(typeof startFlow === 'function') {
+      startFlow();
+    } else {
+      document.getElementById("screenWand").classList.remove("active");
+      document.getElementById("screenStart").classList.add("active");
+    }
   };
 }
 
@@ -138,14 +142,7 @@ function showBossDefeatCardInSummary(score, total) {
   }
 }
 
-// Hijack startGame to route to Wand Screen first if Wand is not designed
+// Initialize wand designer when DOM rests
 document.addEventListener("DOMContentLoaded", () => {
   initWandDesigner();
-  const originalStart = document.getElementById("startGame");
-  if(originalStart) {
-      originalStart.onclick = () => {
-          document.getElementById("screenStart").classList.remove("active");
-          document.getElementById("screenWand").classList.add("active");
-      }
-  }
 });

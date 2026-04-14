@@ -263,6 +263,44 @@ body {
 .screen { display: none; flex-direction: column; gap: 18px; }
 .screen.active { display: flex; }
 
+/* ── Lightning Timer ── */
+.lightning-bar-container {
+  margin: 10px 0;
+  background: rgba(220, 38, 38, 0.15);
+  border: 1px solid rgba(220, 38, 38, 0.4);
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 0 10px rgba(220, 38, 38, 0.2);
+}
+
+.lightning-label {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #fca5a5;
+  z-index: 2;
+}
+
+.lightning-bar-fill {
+  height: 22px;
+  width: 100%;
+  background: linear-gradient(90deg, #b91c1c, #ef4444, #f87171);
+  transition: width 0.1s linear;
+}
+
+/* ── Damage Overlay ── */
+.damage-flash {
+  animation: damagePulse 0.5s ease-out;
+}
+@keyframes damagePulse {
+  0% { box-shadow: inset 0 0 0px rgba(220, 38, 38, 0); }
+  50% { box-shadow: inset 0 0 100px rgba(220, 38, 38, 0.8); }
+  100% { box-shadow: inset 0 0 0px rgba(220, 38, 38, 0); }
+}
+
 /* ── Hero card ── */
 .hero-card {
   display: grid;
@@ -731,15 +769,124 @@ h2 { font-family: "Cinzel", serif; color: var(--text-bright); }
   .question-panel, .side-panel { min-height: auto; }
 }
 
-@media (max-width: 720px) {
-  .topbar, .layout { padding-right: 16px; padding-left: 16px; }
-  .topbar { flex-direction: column; }
-  .question-toolbar, .summary-actions, .stage-header, .question-topline {
+/* ─────────────────────────── MOBILE (≤ 768px) ─────────────────────────── */
+@media (max-width: 768px) {
+  /* Topbar */
+  .topbar {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 14px 16px 0;
+    gap: 10px;
+  }
+  .topbar h1 { font-size: 1.2rem; }
+  .topbar-actions { flex-wrap: wrap; gap: 8px; }
+  .topbar-actions button { flex: 1 1 auto; min-width: 90px; }
+
+  /* Main layout: sidebar moves below, no side-by-side */
+  .layout {
+    grid-template-columns: 1fr;
+    padding: 10px 14px 20px;
+    gap: 12px;
+  }
+  .sidebar {
+    /* Collapse the sidebar into a compact horizontal strip */
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .sidebar .story-panel { grid-column: span 2; }
+
+  /* Hero card stacks vertically */
+  .hero-card {
+    grid-template-columns: 1fr;
+    padding: 18px 16px;
+    gap: 14px;
+  }
+
+  /* Game grid: full-width single column */
+  .game-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* Question panel: canvas takes full width */
+  .canvas-shell { margin: 8px 0; }
+
+  /* Interaction and side panels take full width */
+  .interaction-panel, .side-panel { width: 100%; }
+
+  /* Larger touch targets for all buttons */
+  .primary-button, .secondary-button, .ghost-button {
+    padding: 14px 14px;
+    font-size: 1rem;
+    min-height: 48px;
+  }
+
+  /* Toolbar stretches horizontally */
+  .question-toolbar {
     flex-direction: column;
     align-items: stretch;
+    gap: 8px;
   }
-  .toolbar-buttons { width: 100%; }
-  .toolbar-buttons > button, .summary-actions > button, .hero-actions > button { width: 100%; }
+  .toolbar-buttons {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: 8px;
+  }
+
+  /* Choice buttons fill the area better */
+  .choice-button {
+    flex: 1 1 100%;
+    padding: 14px 12px;
+    font-size: 0.98rem;
+    min-height: 48px;
+    text-align: center;
+  }
+
+  /* Map grid becomes 3 columns on mobile */
+  .map-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+  /* Mini map stays 5 columns but nodes shrink */
+  .mini-map { grid-template-columns: repeat(5, 1fr); gap: 5px; }
+  .mini-node { padding: 5px 0; font-size: 0.7rem; }
+
+  /* Summary actions stack */
+  .summary-actions, .stage-header, .question-topline {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .summary-actions > button, .hero-actions > button { width: 100%; }
+
+  /* Stage header */
+  .stage-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .stage-meta { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* Coach card font */
+  .coach-card p { font-size: 0.88rem; }
+
+  /* Start grid: 1 column on very small screens */
+  .start-grid { grid-template-columns: 1fr; }
+
+  /* Summary breakdown single column */
+  .summary-breakdown { grid-template-columns: 1fr; }
+
+  /* Wand designer full-width */
+  .wand-designer { flex-direction: column; }
+
+  /* Angle readout full width */
+  .angle-readout { width: 100%; }
+}
+
+/* ─────────────────────────── VERY SMALL (≤ 400px) ─────────────────────────── */
+@media (max-width: 400px) {
+  .topbar h1 { font-size: 1rem; }
+  .sidebar { grid-template-columns: 1fr; }
+  .sidebar .story-panel { grid-column: span 1; }
+  .map-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .toolbar-buttons { grid-template-columns: 1fr 1fr; }
 }
 
 /* ── Spell-cast animation on correct answer ── */
@@ -769,3 +916,54 @@ textarea:focus {
 }
 
 textarea::placeholder { color: var(--muted); }
+
+/* --- AI Image Background Integration --- */
+#miniMap {
+  background-image: url('assets/bg_marauders_map_1776142508773.png');
+  background-size: cover;
+  background-position: center;
+  border-radius: 12px;
+  padding: 10px;
+  position: relative;
+  z-index: 1;
+}
+
+#miniMap::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(15, 15, 30, 0.6); /* Dark tint for text readability */
+  border-radius: 12px;
+  z-index: -1;
+}
+
+#screenWand {
+  background-image: url('assets/bg_ollivanders_1776142539913.png');
+  background-size: cover;
+  background-position: center;
+  border-radius: 16px;
+  position: relative;
+}
+
+#screenWand .hero-card, #screenWand .wand-designer {
+  background: rgba(15, 10, 30, 0.85); /* Frosting over the background so text is readable */
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+/* Question Image Styling */
+.question-img-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+.question-img {
+  max-width: 80px;
+  height: auto;
+  filter: drop-shadow(0 0 5px rgba(255, 215, 0, 0.5));
+  animation: magic-float 3s ease-in-out infinite;
+}
+@keyframes magic-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}

@@ -67,7 +67,7 @@ const sandboxCtx = refs.sandboxCanvas.getContext("2d");
 
 const appState = {
   progress: loadProgress(),
-  screens: ["screenStart", "screenDiagnostic", "screenMap", "screenGame", "screenSummary", "screenSandbox"],
+  screens: ["screenStart", "screenWand", "screenDiagnostic", "screenMap", "screenGame", "screenSummary", "screenSandbox"],
   stageIndex: 0,
   stageQuestions: [],
   questionIndex: 0,
@@ -251,7 +251,7 @@ function initialize() {
 }
 
 function bindEvents() {
-  refs.startGame.addEventListener("click", startFlow);
+  refs.startGame.addEventListener("click", () => showScreen("screenWand"));
   refs.startSandbox.addEventListener("click", () => {
     showScreen("screenSandbox");
     renderSandbox();
@@ -308,6 +308,12 @@ function bindEvents() {
   refs.gameCanvas.addEventListener("pointerleave", handleCanvasPointerCancel);
   refs.sandboxCanvas.addEventListener("pointerdown", handleSandboxPointerUp);
   refs.sandboxCanvas.addEventListener("pointerup", handleSandboxPointerUp);
+
+  // Responsive canvas: re-render when window resizes
+  window.addEventListener("resize", () => {
+    resizeStaticCanvases();
+    if (appState.currentQuestion) renderQuestionCanvas();
+  }, { passive: true });
 }
 
 function startFlow() {
@@ -373,6 +379,7 @@ function finishDiagnostic() {
 }
 
 function showMap() {
+  if (appState.challengeTimerId) stopChallengeTimer();
   renderMap();
   showScreen("screenMap");
 }
@@ -414,6 +421,7 @@ function renderMiniMap() {
 
 function startStage(index) {
   stopChallengeTimer();
+  stopLightningTimer();
   appState.challengeMode = false;
   appState.stageIndex = index;
   appState.progress.currentStage = index;
@@ -422,6 +430,8 @@ function startStage(index) {
   appState.questionIndex = 0;
   appState.stageMetrics = createMetricState();
   appState.progress.skipWarmup = false;
+  appState.lives = appState.challengeMode ? 1 : 3; // 1 life in challenge, 3 in normal
+  updateLivesDisplay();
   saveProgress();
   loadQuestion();
   showScreen("screenGame");
@@ -431,27 +441,29 @@ function formatHPLore(text, q) {
   if (!text || !q) return text;
   const labels = ['A', 'B', 'C', 'D'];
   const shapeLen = q.shape?.points?.length || 3;
-  
-  // Fallbacks if shape structure doesn't match
-  if (q.baseSide === undefined || q.vertexIndex === undefined) return text;
-  
+
   const base = q.baseSide;
   const vtx = q.vertexIndex;
-  const baseText = `${labels[base]}-${labels[(base + 1) % shapeLen]}`;
-  const vtxText = labels[vtx];
-  
-  let formatted = text.replace(/\[VTX\]/g, vtxText).replace(/\[BASE\]/g, baseText);
-  
-  // Force injection for older static prompts
-  if (!text.includes("[VTX]") && !text.includes(vtxText)) {
-      formatted += ` (קודקוד ${vtxText} ← בסיס ${baseText})`;
+
+  let formatted = text;
+  if (base !== undefined && vtx !== undefined) {
+      const baseText = `${labels[base]}-${labels[(base + 1) % shapeLen]}`;
+      const vtxText = labels[vtx];
+      formatted = text.replace(/\[VTX\]/g, vtxText).replace(/\[BASE\]/g, baseText);
+      if (!text.includes("[VTX]") && !text.includes(vtxText)) {
+          formatted += ` (קודקוד ${vtxText} ← בסיס ${baseText})`;
+      }
   }
-  
+
+  if (q.img) {
+      formatted = `<div class="question-img-container"><img src="${q.img}" class="question-img" alt="Magic Item"/></div>` + formatted;
+  }
+
   return formatted;
 }
-
 function loadQuestion() {
   clearHintTimer();
+  stopLightningTimer();
   appState.currentQuestion = appState.stageQuestions[appState.questionIndex];
   appState.currentRender = null;
   appState.selectedChoice = null;
@@ -490,6 +502,10 @@ function loadQuestion() {
   updateMetrics();
   renderQuestionCanvas();
   appState.hintTimer = window.setTimeout(() => revealHint(false), 8000);
+  
+  if (q.lightning) {
+    startLightningTimer(q.lightningTime || 12);
+  }
 }
 
 function renderQuestionControls() {
@@ -715,10 +731,11 @@ function checkCurrentAnswer() {
   finalizeAnswer(correct);
 }
 
-function finalizeAnswer(correct) {
+function finalizeAnswer(correct, isTimeout = false) {
   appState.answered = true;
   appState.lastAnswerCorrect = correct;
   clearHintTimer();
+  stopLightningTimer();
   const q = appState.currentQuestion;
   const elapsed = Date.now() - appState.questionStartedAt;
   const category = q.category;
@@ -740,10 +757,30 @@ function finalizeAnswer(correct) {
     appState.progress.stats.externalAltitudes += 1;
   }
   if (!correct) {
-    registerMistakePattern(detectMistakePattern(q));
+    if (!isTimeout) registerMistakePattern(detectMistakePattern(q));
+    
+    // Life System logic
+    appState.lives--;
+    updateLivesDisplay();
+    // Flash damage screen
+    const gameScreen = document.getElementById("screenGame");
+    if (gameScreen) {
+      gameScreen.classList.remove("damage-flash");
+      void gameScreen.offsetWidth; // re-flow
+      gameScreen.classList.add("damage-flash");
+    }
+    
+    if (appState.lives <= 0) {
+      playTone("error");
+      setTimeout(() => {
+        alert("❌ אבדה קדברה! איבדת את כל החיים! וולדמורט ניצח לחש זה... נסה את השיעור מחדש.");
+        startStage(appState.stageIndex); // Restart stage
+      }, 500);
+      return; // Do not render normal feedback, just restart
+    }
   }
   updateMetrics();
-  renderFeedback(correct, q);
+  renderFeedback(correct, q, isTimeout);
   
   if (appState.inBossBattle && typeof triggerVoldemortDefeat === "function") {
     triggerVoldemortDefeat(correct);
@@ -754,15 +791,19 @@ function finalizeAnswer(correct) {
   saveProgress();
 }
 
-function renderFeedback(correct, q) {
+function renderFeedback(correct, q, isTimeout = false) {
   const adaptiveTip = correct ? "" : getAdaptiveCoachMessage(detectMistakePattern(q));
   const card = document.createElement("div");
   card.className = `feedback-card ${correct ? "success" : "error"}`;
+  
+  let errorMsg = q.errorText;
+  if (isTimeout) errorMsg = "אזל הזמן! יש לקבל החלטות מהירות בקרב מול אדון האופל!";
+  
   card.innerHTML = `
     <p><strong>${correct ? "✅ " : "❌ "}${correct ? "נכון! לחש הצליח!" : "לא מדויק. נסה שוב."}</strong></p>
-    <p>${correct ? q.successText : q.errorText}</p>
-    <p><strong>📜 הכלל:</strong> ${q.ruleText}</p>
-    ${adaptiveTip ? `<p><strong>💡 מה לבדוק עכשיו:</strong> ${adaptiveTip}</p>` : ""}
+    <p>${correct ? q.successText : errorMsg}</p>
+    <p><strong>📜 הכלל:</strong> ${q.ruleText || "וולדמורט חסם את הכלל!"}</p>
+    ${adaptiveTip && !isTimeout ? `<p><strong>💡 מה לבדוק עכשיו:</strong> ${adaptiveTip}</p>` : ""}
     <button class="primary-button" id="nextQuestionButton">⚡ לשאלה הבאה</button>
   `;
   refs.feedbackArea.innerHTML = "";
@@ -1149,8 +1190,10 @@ function resetProgress() {
 }
 
 function showScreen(id) {
+  if (appState.challengeTimerId && id !== "screenGame") stopChallengeTimer();
   appState.screens.forEach((screenId) => {
-    document.getElementById(screenId).classList.toggle("active", screenId === id);
+    const el = document.getElementById(screenId);
+    if (el) el.classList.toggle("active", screenId === id);
   });
 }
 
@@ -1822,11 +1865,11 @@ function buildBoosterQuestions(category, stageIndex) {
   if (category === "draw") {
     return isParallelogramStage
       ? [
-          drawQ({ shape: SHAPES.paraA, baseSide: 0, vertexIndex: 3, prompt: "חיזוק מהיר: שרטט גובה לבסיס הכחול.", story: "לפני השלב הבא מחזקים שרטוט אחד מדויק.", coach: "במקבילית בודקים מאונך לבסיס, לא למסך." }),
+          drawQ({ shape: SHAPES.paraA, baseSide: 0, vertexIndex: 3, prompt: "חיזוק מהיר: הפעל קסם שרטוט מדויק לבסיס הכחול!", story: "לפני השלב הבא מחזקים שרטוט אחד מדויק.", coach: "במקבילית בודקים מאונך לבסיס, לא למסך." }),
           drawQ({ shape: SHAPES.paraB, baseSide: 3, vertexIndex: 2, prompt: "חיזוק מהיר: שרטט גובה נוסף לבסיס הכחול.", story: "עוד שרטוט אחד כדי לייצב את היד." }),
         ]
       : [
-          drawQ({ shape: SHAPES.triangleA, baseSide: 0, vertexIndex: 2, prompt: "חיזוק מהיר: שרטט גובה לבסיס הכחול.", story: "לפני השלב הבא מחזקים שרטוט אחד מדויק." }),
+          drawQ({ shape: SHAPES.triangleA, baseSide: 0, vertexIndex: 2, prompt: "חיזוק מהיר: הפעל קסם שרטוט מדויק לבסיס הכחול!", story: "לפני השלב הבא מחזקים שרטוט אחד מדויק." }),
           drawQ({ shape: SHAPES.obtuseTriangleA, baseSide: 0, vertexIndex: 2, allowExtension: true, prompt: "חיזוק מהיר: שרטט גובה גם אם צריך המשך צלע.", story: "עוד שרטוט אחד עם תשומת לב להמשך הצלע." }),
         ];
   }
@@ -1868,18 +1911,18 @@ function buildStages() {
       coach: "שלושה תנאים: קודקוד, מאונך, בסיס – כולם יחד!",
       buildQuestions: (skipWarmup) => {
         const warmup = [
-          selectQ({ shape: SHAPES.triangleA, baseSide: 0, vertexIndex: 2, prompt: "ארבעה קטעים מצוירים – שניים כמעט ניצבים. רק אחד עומד בשלושת התנאים. זהה אותו.", distractors: ["notPerp", "notPerp", "wrongVertex"] }),
-          selectQ({ shape: SHAPES.triangleRotated, baseSide: 2, vertexIndex: 1, prompt: "המשולש מסובב. הבסיס הכחול לא בתחתית. בחר את הגובה הנכון.", distractors: ["notPerp", "wrongVertex", "toEndpoint"] }),
+          selectQ({ img: "assets/img_snitch.svg", shape: SHAPES.triangleA, baseSide: 0, vertexIndex: 2, prompt: "הסניץ' המהיר בורח! זהה את הגובה המדויק כדי לתפוס אותו בשלושת התנאים.", distractors: ["notPerp", "notPerp", "wrongVertex"] }),
+          selectQ({ img: "assets/img_glasses.svg", shape: SHAPES.triangleRotated, baseSide: 2, vertexIndex: 1, prompt: "דרך המשקפיים של הארי: הבסיס הכחול לא בתחתית. בחר את הגובה הנכון.", distractors: ["notPerp", "wrongVertex", "toEndpoint"] }),
         ];
         const main = [
-          choiceQ({ shape: SHAPES.triangleB, baseSide: 1, vertexIndex: 0, prompt: "הקו יוצא מהקודקוד הנכון, נראה ישר ומגיע לבסיס. דני טוען שזה גובה. מה דעתך?", options: ["לא גובה – הוא לא מאונך לבסיס בדיוק 90°", "כן גובה – הוא יוצא מהקודקוד ונוגע בבסיס", "כן גובה – הוא הקצר מבין כל הקווים מאותו קודקוד"], correctIndex: 0, shownLine: { fromIndex: 0, toSide: 1, sideT: 0.18 }, ruleText: "גובה חייב לקיים שני תנאים יחד: לצאת מהקודקוד וגם ליצור 90° עם הבסיס." }),
-          reasonTextQ({ shape: SHAPES.triangleA, baseSide: 0, vertexIndex: 2, prompt: "כתוב את שלושת התנאים שצריכים להתקיים כדי שקטע יהיה גובה במשולש.", keywords: ["קודקוד", "מאונך", "בסיס"], minKeywordMatches: 3, shownLine: { fromIndex: 2, toProjection: { side: 0 } }, showRightAngle: true, placeholder: "תנאי 1: יוצא מ... | תנאי 2: מאונך ל... | תנאי 3: בסיס הוא..." }),
-          selectQ({ shape: SHAPES.triangleRotated, baseSide: 2, vertexIndex: 1, prompt: "שלושה קטעים יוצאים מהקודקוד אל הבסיס – שניים נראים כמעט ניצבים. איזה הוא ניצב בדיוק?", distractors: ["notPerp", "notPerp", "wrongVertex"] }),
+          choiceQ({ img: "assets/img_headmaster_1776107724783.png", shape: SHAPES.triangleB, baseSide: 1, vertexIndex: 0, prompt: "דמבלדור בוחן אותך: דני טוען שזה גובה. האם הוא צודק ב-90°?", options: ["לא גובה – הוא לא מאונך לבסיס בדיוק 90°", "כן גובה – הוא יוצא מהקודקוד ונוגע בבסיס", "כן גובה – הוא הקצר מבין כל הקווים מאותו קודקוד"], correctIndex: 0, shownLine: { fromIndex: 0, toSide: 1, sideT: 0.18 }, ruleText: "גובה חייב לקיים שני תנאים יחד: לצאת מהקודקוד וגם ליצור 90° עם הבסיס." }),
+          reasonTextQ({ shape: SHAPES.triangleA, baseSide: 0, vertexIndex: 2, prompt: "אדון האופל מחייב לדעת: מהם 3 התנאים לקסם הגובה המושלם?", keywords: ["קודקוד", "מאונך", "בסיס"], minKeywordMatches: 3, shownLine: { fromIndex: 2, toProjection: { side: 0 } }, showRightAngle: true, placeholder: "תנאי 1: יוצא מ... | תנאי 2: מאונך ל... | תנאי 3: בסיס הוא..." }),
+          selectQ({ img: "assets/img_train_1776107742896.png", shape: SHAPES.triangleRotated, baseSide: 2, vertexIndex: 1, prompt: "הרכבת להוגוורטס יוצאת! איזה מהניצבים יביא אותך לרציף 9 ו-3/4 בדיוק?", distractors: ["notPerp", "notPerp", "wrongVertex"] }),
           drawQ({ shape: SHAPES.triangleB, baseSide: 1, vertexIndex: 0, prompt: "שרטט גובה לצלע הכחולה. הטולרנס הוא 7° בלבד!", coach: "זווית של 90° בדיוק. אם הסימן הירוק לא מופיע – הזווית עדיין לא מדויקת." }),
           reverseQ({ shape: SHAPES.triangleRotated, baseSide: 0, vertexIndex: 2, prompt: "הגובה האדום מסומן. לאיזו צלע הוא שייך? (המשולש מסובב – הבסיס לא למטה!)" }),
           fixQ({ shape: SHAPES.triangleA, baseSide: 0, vertexIndex: 2, prompt: "הקו יוצא מהקודקוד הנכון, נוגע בבסיס ויוצר זווית של 82°. דני: 'זה גובה בערך'. מה הטעות המדויקת?", shownLine: { fromIndex: 2, toSide: 0, sideT: 0.35 }, options: ["82° לא מספיק – נדרש בדיוק 90°", "הוא היה צריך לצאת מקודקוד אחר", "הוא היה צריך לפגוש בדיוק את קצה הבסיס"], correctIndex: 0, ruleText: "מאונך = בדיוק 90°. כל סטייה פוסלת את הגובה." }),
-          selectQ({ shape: SHAPES.rightTriangleA, baseSide: 2, vertexIndex: 1, prompt: "במשולש ישר זווית: הצלע הניצבת יכולה להיות גובה – אבל רק לאיזה בסיס? בחר נכון.", distractors: ["notPerp", "wrongBase", "wrongVertex"] }),
-          drawQ({ shape: SHAPES.triangleRotated, baseSide: 2, vertexIndex: 1, prompt: "המשולש מסובב – שרטט גובה. אל תסמוך על עיניך: בדוק את הזווית מול הבסיס הכחול!", coach: "הבסיס הכחול הוא הקנה מידה, לא המסך." }),
+          selectQ({ shape: SHAPES.rightTriangleA, baseSide: 2, vertexIndex: 1, prompt: "קרב בחדר הנעלם! קיר כחול מסתיר גובה סודי כצלע במשולש ישר זווית. בחר נכון.", distractors: ["notPerp", "wrongBase", "wrongVertex"] }),
+          drawQ({ shape: SHAPES.triangleRotated, baseSide: 2, vertexIndex: 1, lightning: true, lightningTime: 12, prompt: "זהירות! חדר הלחשים מסתובב! שרטט מהר את הגובה כדי לעצור את הקריסה. אל תסמוך על עיניך: בדוק את הזווית מול הבסיס הכחול!", coach: "הבסיס הכחול הוא הקנה מידה, לא המסך." }),
           reasonTextQ({ shape: SHAPES.triangleRotated, baseSide: 1, vertexIndex: 0, prompt: "הקטע האדום יוצא מהקודקוד הנכון ונוגע בבסיס – אבל הוא לא גובה. ציין בדיוק איזה תנאי חסר.", keywords: ["לא", "מאונך", "90"], minKeywordMatches: 2, shownLine: { fromIndex: 0, toSide: 1, sideT: 0.22 }, placeholder: "חסר תנאי: ..." }),
           reverseQ({ shape: SHAPES.triangleB, baseSide: 2, vertexIndex: 1, prompt: "לאיזו צלע שייך הגובה האדום? (שלוש צלעות – בחר את הנכונה בלבד)" }),
         ];
@@ -1898,14 +1941,14 @@ function buildStages() {
       story: "פרופ' מקגונאגל מציגה ארבעה קווים – רק אחד הוא גובה אמיתי. שגיאה = נקודה לסלית'רין!",
       coach: "אל תסמוך על מראה עיניין – בדוק 90° מול הבסיס.",
       buildQuestions: () => [
-        selectQ({ shape: SHAPES.triangleRotated, baseSide: 1, vertexIndex: 0, prompt: "שלושה קטעים מובאים – שניים נראים כמעט ניצבים לבסיס הכחול. רק אחד הוא 90° בדיוק. בחר אותו.", distractors: ["notPerp", "notPerp", "wrongVertex"] }),
-        choiceQ({ shape: SHAPES.triangleB, baseSide: 0, vertexIndex: 2, prompt: "הקו יוצא מהקודקוד ונראה 'כמעט אנכי'. לכן דני בחר אותו כגובה. מה הבעיה בהיגיון של דני?", options: ["הוא הסתמך על מראה ולא בדק זווית מול הבסיס", "הוא לא מדד את אורך הקו", "הוא בחר את הקו הלא-ישיר ביותר"], correctIndex: 0, shownLine: { fromIndex: 2, toSide: 0, sideT: 0.12 }, ruleText: "הקו הקצר ביותר מנקודה לישר הוא המאונך – וזה בדיוק הגובה." }),
-        selectQ({ shape: SHAPES.obtuseTriangleA, baseSide: 0, vertexIndex: 2, allowExtension: true, prompt: "⚠️ משולש קהה: הגובה פוגע ב-המשך הצלע, לא בצלע עצמה. בחר נכון.", story: "במשולש קהה הגובה נחתך מחוץ לצורה.", distractors: ["wrongVertex", "notPerp", "toEndpoint"] }),
+        selectQ({ img: "assets/img_dementors_1776110709922.png", shape: SHAPES.triangleRotated, baseSide: 1, vertexIndex: 0, prompt: "הסוהרסנים מתקרבים! רק גובה מדויק בזווית 90° יגרש אותם. בחר את הקו הנכון.", distractors: ["notPerp", "notPerp", "wrongVertex"] }),
+        choiceQ({ img: "assets/img_slytherin_1776110740424.png", shape: SHAPES.triangleB, baseSide: 0, vertexIndex: 2, prompt: "תלמיד סלית'רין מנסה להטעות: הוא טוען ש'כמעט אנכי' זה גובה. מה הבעיה?", options: ["הוא הסתמך על מראה ולא בדק זווית מול הבסיס", "הוא לא מדד את אורך הקו", "הוא בחר את הקו הלא-ישיר ביותר"], correctIndex: 0, shownLine: { fromIndex: 2, toSide: 0, sideT: 0.12 }, ruleText: "הקו הקצר ביותר מנקודה לישר הוא המאונך – וזה בדיוק הגובה." }),
+        selectQ({ img: "assets/img_magic_spark_1776110724770.png", shape: SHAPES.obtuseTriangleA, baseSide: 0, vertexIndex: 2, allowExtension: true, prompt: "ניצוץ קסום מחוץ למשולש! זהה את הגובה החיצוני הנכון.", story: "במשולש קהה הגובה נחתך מחוץ לצורה.", distractors: ["wrongVertex", "notPerp", "toEndpoint"] }),
         reasonTextQ({ shape: SHAPES.triangleRotated, baseSide: 2, vertexIndex: 1, prompt: "הקו האדום יוצא מהקודקוד ונוגע בבסיס – חסר בו תנאי אחד. כתוב: (1) מה חסר (2) מדוע זה חשוב.", keywords: ["מאונך", "90", "ניצב"], minKeywordMatches: 2, shownLine: { fromIndex: 1, toSide: 2, sideT: 0.15 }, placeholder: "חסר: ... | חשוב כי: ..." }),
-        drawQ({ shape: SHAPES.triangleRotated, baseSide: 0, vertexIndex: 2, prompt: "שרטט גובה. אזהרה: הבסיס מוטה – אל תשרטט אנכי לפי המסך!", coach: "הצלע הכחולה היא הבסיס. בדוק 90° מולה, לא מול הרצפה." }),
+        drawQ({ shape: SHAPES.triangleRotated, baseSide: 0, vertexIndex: 2, prompt: "שרטט גובה. קסם האשליה של מאלפוי מקשה על הראייה! הבסיס מוטה!", coach: "הצלע הכחולה היא הבסיס. בדוק 90° מולה, לא מול הרצפה." }),
         reverseQ({ shape: SHAPES.triangleA, baseSide: 2, vertexIndex: 1, prompt: "הגובה האדום – לאיזו צלע שייך? שים לב: לא תמיד הצלע שנראית 'אופקית'!" }),
         fixQ({ shape: SHAPES.triangleB, baseSide: 1, vertexIndex: 0, prompt: "דני שרטט קו שאכן מאונך לבסיס בדיוק. עדיין יש טעות בסיסית. מה היא?", shownLine: { fromIndex: 2, toProjection: { side: 1 } }, options: ["הוא יצא מהקודקוד הלא נכון – לא מהקודקוד שמול הבסיס", "הקו לא מאונך לבסיס", "הגובה צריך להיות קצר יותר"], correctIndex: 0, ruleText: "גובה חייב לצאת מהקודקוד שמול הבסיס הנתון. קו מאונך ממקום אחר אינו גובה!" }),
-        choiceQ({ shape: SHAPES.triangleA, baseSide: 1, vertexIndex: 0, prompt: "מדוע הגובה הוא דווקא הקו המאונך ולא כל קו אחר מהקודקוד לבסיס?", options: ["כי הקו המאונך הוא הקצר ביותר מהקודקוד לישר הבסיס", "כי הקו המאונך תמיד עובר דרך מרכז הבסיס", "כי כך הוגדר בלי סיבה מתמטית"], correctIndex: 0, shownLine: { fromIndex: 0, toProjection: { side: 1 } }, showRightAngle: true, ruleText: "הגובה = הקצר ביותר = המאונך. שלושה שמות לאותו הדבר!" }),
+        choiceQ({ shape: SHAPES.triangleA, baseSide: 1, vertexIndex: 0, prompt: "מדוע קסם הגובה עובד רק בזווית ישרה (מאונך)?", options: ["כי הקו המאונך הוא הקצר ביותר מהקודקוד לישר הבסיס", "כי הקו המאונך תמיד עובר דרך מרכז הבסיס", "כי כך הוגדר בלי סיבה מתמטית"], correctIndex: 0, shownLine: { fromIndex: 0, toProjection: { side: 1 } }, showRightAngle: true, ruleText: "הגובה = הקצר ביותר = המאונך. שלושה שמות לאותו הדבר!" }),
         selectQ({ shape: SHAPES.rightTriangleB, baseSide: 1, vertexIndex: 0, prompt: "במשולש ישר זווית – בחר את הגובה לבסיס הכחול.", distractors: ["notPerp", "wrongBase", "toEndpoint"] }),
         drawQ({ shape: SHAPES.obtuseTriangleB, baseSide: 0, vertexIndex: 2, allowExtension: true, prompt: "⚠️ משולש קהה! שרטט גובה – ייתכן שתצטרך להמשיך את הצלע מחוץ למשולש.", coach: "אם הגובה יוצא מחוץ למשולש – זה נורמלי. שרטט עד שתגיע ל-90°." }),
       ],
@@ -1922,13 +1965,14 @@ function buildStages() {
       story: "קסם נכון מחייב דיוק פרפקט. שגיאה של 6° = הגשר קורס שוב.",
       coach: "צא מהקודקוד הנכון והישאר נאמן ל-90° מול הבסיס הכחול.",
       buildQuestions: () => [
-        drawQ({ shape: SHAPES.triangleA, baseSide: 0, vertexIndex: 2, prompt: "שרטט גובה לבסיס הכחול. הטולרנס הוא 7° בלבד.", coach: "צא מהקודקוד הקיצוני. מאונך = 90°." }),
+        drawQ({ img: "assets/img_wand.svg", shape: SHAPES.triangleA, baseSide: 0, vertexIndex: 2, prompt: "הנף את השרביט! שרטט גובה לבסיס הכחול בשיא הדיוק.", coach: "צא מהקודקוד הקיצוני. מאונך = 90°." }),
+
         drawQ({ shape: SHAPES.triangleRotated, baseSide: 2, vertexIndex: 1, prompt: "המשולש מסובב – שרטט גובה מדויק. אל תבדוק מול אנכי המסך!", coach: "אל תתבלבל עם כיוון המסך. בדוק מול הבסיס הכחול בלבד." }),
         drawQ({ shape: SHAPES.obtuseTriangleA, baseSide: 0, vertexIndex: 2, allowExtension: true, prompt: "⚠️ משולש קהה! שרטט גובה – הגובה עשוי לנחות מחוץ לצלע עצמה.", coach: "המשך את הצלע הכחולה בדמיונך. הגובה פוגש את הישר הזה." }),
         selectQ({ shape: SHAPES.obtuseTriangleB, baseSide: 1, vertexIndex: 0, allowExtension: true, prompt: "⚠️ משולש קהה – הגובה יוצא מחוץ לצורה. בחר נכון.", distractors: ["notPerp", "notPerp", "wrongVertex"] }),
         reverseQ({ shape: SHAPES.triangleB, baseSide: 2, vertexIndex: 1, prompt: "לאיזו צלע שייך הגובה האדום? (משולש לא רגיל – בחן כל צלע)" }),
         reasonTextQ({ shape: SHAPES.triangleRotated, baseSide: 0, vertexIndex: 2, prompt: "הקו האדום יוצא מהקודקוד הנכון אך לא נחשב גובה. כתוב: (1) מה חסר (2) איך לתקן.", keywords: ["מאונך", "לא", "90"], minKeywordMatches: 2, shownLine: { fromIndex: 2, toSide: 0, sideT: 0.4 }, placeholder: "חסר: ... | תיקון: ..." }),
-        drawQ({ shape: SHAPES.triangleB, baseSide: 0, vertexIndex: 2, prompt: "שרטט גובה לבסיס הכחול. שים לב לפינה החדה.", coach: "הפינה הקטנה מסייעת להבין צירת 90°." }),
+        drawQ({ shape: SHAPES.triangleB, baseSide: 0, vertexIndex: 2, prompt: "הפעל קסם שרטוט מדויק לבסיס הכחול! שים לב לפינה החדה.", coach: "הפינה הקטנה מסייעת להבין צירת 90°." }),
         fixQ({ shape: SHAPES.triangleRotated, baseSide: 0, vertexIndex: 2, prompt: "דני שרטט קו אנכי לפי המסך – אך המשולש מסובב. מה הבעיה המדויקת?", shownLine: { fromIndex: 2, toSide: 0, sideT: 0.18 }, options: ["הוא בדק 90° מול המסך ולא מול הבסיס הכחול", "הוא יצא מקודקוד לא נכון", "הוא היה צריך לצייר קו קצר יותר"], correctIndex: 0 }),
         selectQ({ shape: SHAPES.rightTriangleA, baseSide: 0, vertexIndex: 2, prompt: "במשולש ישר זווית – לאיזה בסיס שייך הגובה הנוכחי? בחר את הצלע הנכונה.", distractors: ["notPerp", "wrongBase", "wrongVertex"] }),
         drawQ({ shape: SHAPES.triangleRotated, baseSide: 1, vertexIndex: 0, prompt: "גובה אחרון לשלב – המשולש מסובב בכוון לא רגיל. שים לב לכיוון הבסיס הכחול!", coach: "איזו צלע כחולה? מי הקודקוד שמולה? צא ממנו." }),
@@ -1946,7 +1990,7 @@ function buildStages() {
       story: "בחדר הלחשים גילו: במשולש ישר זווית יש גובה שמסתתר בצלע עצמה!",
       coach: "במשולש ישר זווית, שתי הצלעות הניצבות הן גובה אחת לשנייה.",
       buildQuestions: () => [
-        choiceQ({ shape: SHAPES.rightTriangleA, baseSide: 0, vertexIndex: 2, prompt: "במשולש ישר זווית – הצלע הניצבת היא גם גובה. לאיזה בסיס?", options: ["לצלע הניצבת השנייה (לא להיפוטנוזה)", "לכל בסיס שרוצים", "להיפוטנוזה בלבד"], correctIndex: 0, shownLine: { fromIndex: 2, toProjection: { side: 0 } }, showRightAngle: true, ruleText: "כל אחת מהצלעות הניצבות היא גובה לרעותה." }),
+        choiceQ({ img: "assets/img_hat.svg", shape: SHAPES.rightTriangleA, baseSide: 0, vertexIndex: 2, prompt: "מצנפת המיון קובעת: במשולש ישר זווית – הצלע הניצבת היא גם גובה. לאיזה בסיס?", options: ["לצלע הניצבת השנייה (לא להיפוטנוזה)", "לכל בסיס שרוצים", "להיפוטנוזה בלבד"], correctIndex: 0, shownLine: { fromIndex: 2, toProjection: { side: 0 } }, showRightAngle: true, ruleText: "כל אחת מהצלעות הניצבות היא גובה לרעותה." }),
         selectQ({ shape: SHAPES.rightTriangleA, baseSide: 1, vertexIndex: 0, prompt: "בחר את הגובה לצלע הניצבת הכחולה. (רמז: זה קל יותר ממה שנדמה)", distractors: ["notPerp", "wrongBase", "toEndpoint"] }),
         reasonTextQ({ shape: SHAPES.rightTriangleA, baseSide: 0, vertexIndex: 2, prompt: "הסבר: במשולש ישר זווית – מדוע הצלע הניצבת יכולה לשמש כגובה?", keywords: ["מאונך", "ניצבת", "90"], minKeywordMatches: 2, shownLine: { fromIndex: 2, toProjection: { side: 0 } }, showRightAngle: true, placeholder: "כי הצלע הניצבת יוצרת 90° עם..." }),
         choiceQ({ shape: SHAPES.rightTriangleB, baseSide: 2, vertexIndex: 0, prompt: "כמה גבהים שונים יש לכל משולש (כולל ישר זווית)?", options: ["3 גבהים – אחד מכל קודקוד", "1 גובה בלבד – הגבוה ביותר", "2 גבהים – אחד מכל קצה"], correctIndex: 0, shownLine: { fromIndex: 0, toProjection: { side: 2 } }, showRightAngle: true, ruleText: "כל משולש בעל 3 קודקודים → 3 גבהים שונים (אחד לכל בסיס)." }),
@@ -1970,13 +2014,13 @@ function buildStages() {
       story: "פרופ' סנייפ אומר: 'הגובה לא תמיד בתוך המשולש. ודאו שאתם יודעים מתי הוא יוצא'.",
       coach: "במשולש קהה: לפחות שניים מהגבהים יוצאים מחוץ לצורה.",
       buildQuestions: () => [
-        choiceQ({ shape: SHAPES.obtuseTriangleA, baseSide: 0, vertexIndex: 2, allowExtension: true, prompt: "הגובה מהקודקוד E יוצא מחוץ למשולש. מה הסיבה?", options: ["כי הזווית בקודקוד E קהה (גדולה מ-90°)", "כי הגובה תמיד יוצא מחוץ למשולש", "כי הבסיס קצר מדי ולכן הגובה ממשיך"], correctIndex: 0, shownLine: { fromIndex: 2, toProjection: { side: 0 } }, showRightAngle: true, ruleText: "כאשר זווית משולש גדולה מ-90°, הגובה המתאים יוצא מחוץ לצורה." }),
+        choiceQ({ img: "assets/img_dark_boss_1776107697845.png", shape: SHAPES.obtuseTriangleA, baseSide: 0, vertexIndex: 2, allowExtension: true, prompt: "האופל מתחזק! הגובה מהקודקוד E יוצא מחוץ למשולש. מה הסיבה?", options: ["כי הזווית בקודקוד E קהה (גדולה מ-90°)", "כי הגובה תמיד יוצא מחוץ למשולש", "כי הבסיס קצר מדי ולכן הגובה ממשיך"], correctIndex: 0, shownLine: { fromIndex: 2, toProjection: { side: 0 } }, showRightAngle: true, ruleText: "כאשר זווית משולש גדולה מ-90°, הגובה המתאים יוצא מחוץ לצורה." }),
         selectQ({ shape: SHAPES.obtuseTriangleA, baseSide: 0, vertexIndex: 2, allowExtension: true, prompt: "⚠️ גובה חיצוני: איזה קטע הוא הגובה הנכון לבסיס הכחול?", distractors: ["wrongVertex", "notPerp", "toEndpoint"] }),
-        drawQ({ shape: SHAPES.obtuseTriangleA, baseSide: 0, vertexIndex: 2, allowExtension: true, prompt: "שרטט גובה לבסיס הכחול. הגובה יוצא מחוץ למשולש!", coach: "המשך את הצלע הכחולה בדמיונך. שרטט 90° מולה." }),
+        drawQ({ shape: SHAPES.obtuseTriangleA, baseSide: 0, vertexIndex: 2, allowExtension: true, prompt: "הפעל קסם שרטוט מדויק לבסיס הכחול! הגובה יוצא מחוץ למשולש!", coach: "המשך את הצלע הכחולה בדמיונך. שרטט 90° מולה." }),
         selectQ({ shape: SHAPES.obtuseTriangleB, baseSide: 1, vertexIndex: 0, allowExtension: true, prompt: "⚠️ משולש קהה – בחר את הגובה לבסיס הכחול. ייתכן שהוא מחוץ לצורה.", distractors: ["notPerp", "notPerp", "wrongVertex"] }),
         reasonTextQ({ shape: SHAPES.obtuseTriangleA, baseSide: 2, vertexIndex: 1, prompt: "הסבר: מתי גובה של משולש יוצא מחוץ לצורה? כתוב את הכלל.", keywords: ["קהה", "זווית", "חיצוני"], minKeywordMatches: 2, shownLine: { fromIndex: 1, toProjection: { side: 2 } }, showRightAngle: true, placeholder: "כאשר הזווית... אז הגובה..." }),
         fixQ({ shape: SHAPES.obtuseTriangleA, baseSide: 0, vertexIndex: 2, allowExtension: true, prompt: "דני שרטט גובה שנגמר בגבול המשולש (לא המשיך החוצה). מה הבעיה?", shownLine: { fromIndex: 2, toSide: 0, sideT: 0.5 }, options: ["הגובה חייב להמשיך עד שיפגש את ישר הבסיס (גם מחוץ לצלע)", "הגובה תמיד מסתיים בתוך המשולש", "הוא יצא מקודקוד לא נכון"], correctIndex: 0, ruleText: "הגובה חייב לפגוש את ישר הבסיס – גם אם הנקודה מחוץ לצלע." }),
-        drawQ({ shape: SHAPES.obtuseTriangleB, baseSide: 0, vertexIndex: 2, allowExtension: true, prompt: "שרטט גובה לבסיס הכחול. שים לב: ייתכן שתצטרך להמשיך את הצלע.", coach: "אם שרטטת בתוך המשולש – בדוק שוב אם המשולש קהה." }),
+        drawQ({ shape: SHAPES.obtuseTriangleB, baseSide: 0, vertexIndex: 2, allowExtension: true, prompt: "הפעל קסם שרטוט מדויק לבסיס הכחול! שים לב: ייתכן שתצטרך להמשיך את הצלע.", coach: "אם שרטטת בתוך המשולש – בדוק שוב אם המשולש קהה." }),
         choiceQ({ shape: SHAPES.obtuseTriangleB, baseSide: 1, vertexIndex: 0, allowExtension: true, prompt: "כמה גבהים 'חיצוניים' (מחוץ לצורה) יש למשולש קהה?", options: ["שניים – מהקודקודים שמול הצלעות ה'חדות'", "אחד בלבד – מהקודקוד הקהה", "שלושה – כולם חיצוניים"], correctIndex: 0, shownLine: { fromIndex: 0, toProjection: { side: 1 } }, showRightAngle: true, ruleText: "במשולש קהה: 2 גבהים חיצוניים, 1 פנימי (מהקודקוד הקהה)." }),
         reverseQ({ shape: SHAPES.obtuseTriangleA, baseSide: 2, vertexIndex: 1, prompt: "הגובה האדום יוצא מחוץ למשולש. לאיזו צלע הוא שייך?" }),
         drawQ({ shape: SHAPES.obtuseTriangleA, baseSide: 2, vertexIndex: 1, allowExtension: true, prompt: "גובה אחרון: שרטט מהקודקוד הנתון לבסיס הכחול. שים לב לאיזה כיוון הגובה יוצא!", coach: "הגובה הזה אולי יוצא מחוץ למשולש – בדוק." }),
@@ -1994,7 +2038,7 @@ function buildStages() {
       story: "המגדל האחרון דורש ידיעה שלמה: כל משולש שומר שלושה גבהים – אחד לכל בסיס.",
       coach: "שנה את הבסיס – שנה את הגובה. שלושה בסיסים → שלושה גבהים שונים.",
       buildQuestions: () => [
-        choiceQ({ shape: SHAPES.triangleA, baseSide: 0, vertexIndex: 2, prompt: "כמה גבהים שונים יש לכל משולש?", options: ["3 גבהים – אחד מכל קודקוד לצלע שמולו", "1 גובה – הקטע המאונך הגבוה ביותר", "2 גבהים – מכל קצה של הבסיס"], correctIndex: 0, shownLine: { fromIndex: 2, toProjection: { side: 0 } }, showRightAngle: true, ruleText: "כל משולש בעל 3 קודקודים → 3 גבהים (אחד מכל קודקוד לצלע שמולו)." }),
+        choiceQ({ img: "assets/img_potion.svg", shape: SHAPES.triangleA, baseSide: 0, vertexIndex: 2, prompt: "שיעור שיקויים: כמה גבהים שונים יש לכל משולש?", options: ["3 גבהים – אחד מכל קודקוד לצלע שמולו", "1 גובה – הקטע המאונך הגבוה ביותר", "2 גבהים – מכל קצה של הבסיס"], correctIndex: 0, shownLine: { fromIndex: 2, toProjection: { side: 0 } }, showRightAngle: true, ruleText: "כל משולש בעל 3 קודקודים → 3 גבהים (אחד מכל קודקוד לצלע שמולו)." }),
         drawQ({ shape: SHAPES.triangleA, baseSide: 1, vertexIndex: 0, prompt: "עכשיו הבסיס הוא הצלע השנייה (כחולה). שרטט את הגובה המתאים.", coach: "בסיס שונה = קודקוד שונה = גובה שונה." }),
         drawQ({ shape: SHAPES.triangleA, baseSide: 2, vertexIndex: 1, prompt: "עכשיו הבסיס הוא הצלע השלישית (כחולה). שרטט את הגובה השלישי של אותו משולש.", coach: "זהו הגובה השלישי של אותו משולש – מקודקוד נפרד." }),
         reverseQ({ shape: SHAPES.triangleRotated, baseSide: 0, vertexIndex: 2, prompt: "הגובה האדום מסומן – לאיזו מהצלעות הוא שייך? (שים לב למיקום הקודקוד)" }),
@@ -2018,7 +2062,7 @@ function buildStages() {
       story: "כנף דרקון שומרת את הגשר – צלעות המקבילית הן הכנפיים, הגובה הוא עמוד השדרה.",
       coach: "גובה במקבילית: מאונך מצלע אחת (או המשכה) אל הצלע המקבילה לה.",
       buildQuestions: () => [
-        choiceQ({ shape: SHAPES.paraA, baseSide: 0, vertexIndex: 3, prompt: "מדוע הצלע הנטויה של המקבילית אינה יכולה להיות הגובה?", options: ["כי היא לא מאונכת לבסיס – היא נוטה", "כי היא לא נוגעת בבסיס", "כי הגובה חייב לצאת מהזווית הישרה"], correctIndex: 0, shownLine: { fromIndex: 3, toProjection: { side: 0 } }, showRightAngle: true, ruleText: "גובה מקבילית = מאונך מצלע אחת אל הצלע המקבילה." }),
+        choiceQ({ img: "assets/img_broom.svg", shape: SHAPES.paraA, baseSide: 0, vertexIndex: 3, prompt: "נימבוס 2000 באוויר! מדוע הצלע הנטויה של המקבילית אינה יכולה להיות הגובה?", options: ["כי היא לא מאונכת לבסיס – היא נוטה", "כי היא לא נוגעת בבסיס", "כי הגובה חייב לצאת מהזווית הישרה"], correctIndex: 0, shownLine: { fromIndex: 3, toProjection: { side: 0 } }, showRightAngle: true, ruleText: "גובה מקבילית = מאונך מצלע אחת אל הצלע המקבילה." }),
         selectQ({ shape: SHAPES.paraA, baseSide: 0, vertexIndex: 3, prompt: "בחר את הגובה הנכון במקבילית לבסיס הכחול.", distractors: ["notPerp", "wrongBase", "toEndpoint"] }),
         drawQ({ shape: SHAPES.paraA, baseSide: 0, vertexIndex: 3, prompt: "שרטט גובה במקבילית לבסיס הכחול.", coach: "הגובה יוצא מהצלע המקבילה ומגיע לישר הבסיס בזווית 90°." }),
         reverseQ({ shape: SHAPES.paraB, baseSide: 3, vertexIndex: 2, prompt: "הגובה האדום מסומן במקבילית. לאיזו צלע (בסיס) הוא שייך?" }),
@@ -2042,7 +2086,7 @@ function buildStages() {
       story: "כנפי הדרקון יכולות לנטות לשני כיוונים – ולכל כיוון יש גובה שונה!",
       coach: "למקבילית שני גבהים: אחד לכל זוג של צלעות מקבילות.",
       buildQuestions: () => [
-        choiceQ({ shape: SHAPES.paraA, baseSide: 0, vertexIndex: 3, prompt: "כמה גבהים שונים יש למקבילית?", options: ["2 גבהים – אחד לכל זוג צלעות מקבילות", "1 גובה – תמיד האורך האנכי", "4 גבהים – אחד מכל קודקוד"], correctIndex: 0, shownLine: { fromIndex: 3, toProjection: { side: 0 } }, showRightAngle: true, ruleText: "למקבילית 2 גבהים: אחד לכל זוג צלעות מקבילות." }),
+        choiceQ({ img: "assets/img_snitch.svg", shape: SHAPES.paraA, baseSide: 0, vertexIndex: 3, prompt: "תפסנו את הסניץ'! עכשיו, כמה גבהים שונים יש למקבילית?", options: ["2 גבהים – אחד לכל זוג צלעות מקבילות", "1 גובה – תמיד האורך האנכי", "4 גבהים – אחד מכל קודקוד"], correctIndex: 0, shownLine: { fromIndex: 3, toProjection: { side: 0 } }, showRightAngle: true, ruleText: "למקבילית 2 גבהים: אחד לכל זוג צלעות מקבילות." }),
         drawQ({ shape: SHAPES.paraA, baseSide: 0, vertexIndex: 3, prompt: "שרטט את הגובה הראשון – לצלעות האופקיות (כחולות).", coach: "הגובה מאונך לצלע האופקית." }),
         drawQ({ shape: SHAPES.paraA, baseSide: 1, vertexIndex: 0, prompt: "שרטט את הגובה השני – לצלעות הנטויות (כחולות).", coach: "בסיס שונה → גובה שונה לגמרי. יוצא מהצלע המקבילה." }),
         reverseQ({ shape: SHAPES.paraB, baseSide: 1, vertexIndex: 0, prompt: "הגובה האדום שייך לאיזו צלע? (שתי אפשרויות – בחן שתיהן)" }),
@@ -2066,7 +2110,7 @@ function buildStages() {
       story: "הבחינה הסופית של הוגוורטס: שאלות ממשולש ומקבילית ערבוביות – בלי אזהרה!",
       coach: "שאל את עצמך: זה משולש או מקבילית? אחר כך, מהו הבסיס?",
       buildQuestions: () => [
-        choiceQ({ shape: SHAPES.triangleA, baseSide: 0, vertexIndex: 2, prompt: "הקו האדום במשולש יוצא מהקודקוד ומגיע לבסיס. הוא מאונך. אך דני אומר שזו גם הצלע. מה נכון?", options: ["הקו הוא גובה – מאונך מהקודקוד לבסיס", "הקו הוא צלע – צלע יכולה להיות גובה", "שניהם נכונים – כל קטע הוא גם צלע וגם גובה"], correctIndex: 0, shownLine: { fromIndex: 2, toProjection: { side: 0 } }, showRightAngle: true, ruleText: "גובה הוא קטע מיוחד, לא בהכרח צלע (אלא בישר זווית)." }),
+        choiceQ({ img: "assets/img_dark_boss_1776107697845.png", shape: SHAPES.triangleA, baseSide: 0, vertexIndex: 2, prompt: "וולדמורט מעמיד אותך למבחן! הקו האדום במשולש יוצא מהקודקוד ומגיע לבסיס. הוא מאונך. אך דני אומר שזו גם הצלע. מה נכון?", options: ["הקו הוא גובה – מאונך מהקודקוד לבסיס", "הקו הוא צלע – צלע יכולה להיות גובה", "שניהם נכונים – כל קטע הוא גם צלע וגם גובה"], correctIndex: 0, shownLine: { fromIndex: 2, toProjection: { side: 0 } }, showRightAngle: true, ruleText: "גובה הוא קטע מיוחד, לא בהכרח צלע (אלא בישר זווית)." }),
         choiceQ({ shape: SHAPES.paraA, baseSide: 0, vertexIndex: 3, prompt: "מהו ההבדל בין גובה של משולש לגובה של מקבילית (כאשר שניהם לאותו סוג בסיס)?", options: ["גובה מקבילית יוצא מהצלע המקבילה, גובה משולש יוצא מהקודקוד שמולה", "גובה מקבילית ארוך יותר", "אין הבדל – שניהם ניצבים לבסיס"], correctIndex: 0, shownLine: { fromIndex: 3, toProjection: { side: 0 } }, showRightAngle: true, ruleText: "במשולש – מקודקוד לצלע שמולו. במקבילית – מצלע לצלע המקבילה." }),
         drawQ({ shape: SHAPES.obtuseTriangleA, baseSide: 0, vertexIndex: 2, allowExtension: true, prompt: "⚠️ משולש קהה – שרטט גובה חיצוני. זכור: הגובה יוצא מחוץ לצורה.", coach: "המשך את הצלע הכחולה בדמיונך." }),
         drawQ({ shape: SHAPES.paraC, baseSide: 0, vertexIndex: 3, prompt: "שרטט גובה במקבילית הנטויה. הגובה עשוי לנחות מחוץ לצלע!", coach: "אפשרי! במקבילית נטויה יכול הגובה לנחות על המשך הצלע." }),
@@ -2090,7 +2134,7 @@ function buildStages() {
       story: "הוגוורטס קורא: 'רק מי שיענה נכון על 10 שאלות יקבל ת'ורצ' ממגדל גריפינדור!'",
       coach: "חשוב לפני שעונה. אל תסמוך על האינטואיציה בלבד.",
       buildQuestions: () => [
-        reasonTextQ({ shape: SHAPES.triangleA, baseSide: 0, vertexIndex: 2, prompt: "שאלת מבחן: הגדר גובה במשולש בדיוק, הזכר שלושה תנאים.", keywords: ["קודקוד", "מאונך", "בסיס"], minKeywordMatches: 3, shownLine: { fromIndex: 2, toProjection: { side: 0 } }, showRightAngle: true, placeholder: "גובה הוא קטע היוצא מ... המאונך ל..." }),
+        reasonTextQ({ img: "assets/img_headmaster_1776107724783.png", shape: SHAPES.triangleA, baseSide: 0, vertexIndex: 2, prompt: "דמבלדור מסכם: הגדר גובה במשולש בדיוק, הזכר שלושה תנאים.", keywords: ["קודקוד", "מאונך", "בסיס"], minKeywordMatches: 3, shownLine: { fromIndex: 2, toProjection: { side: 0 } }, showRightAngle: true, placeholder: "גובה הוא קטע היוצא מ... המאונך ל..." }),
         choiceQ({ shape: SHAPES.obtuseTriangleA, baseSide: 0, vertexIndex: 2, allowExtension: true, prompt: "במשולש קהה: לפי איזה כלל הגובה יוצא מחוץ לצורה?", options: ["כשהזווית בקודקוד גדולה מ-90° – הרגל יוצאת מחוץ לצלע", "כשהמשולש גדול מאוד – הגובה יוצא החוצה", "כשהבסיס קצר – הגובה חייב להמשיך"], correctIndex: 0, shownLine: { fromIndex: 2, toProjection: { side: 0 } }, showRightAngle: true, ruleText: "זווית > 90° בקודקוד → הגובה מהקודקוד ההפוך יוצא חוץ." }),
         drawQ({ shape: SHAPES.triangleRotated, baseSide: 0, vertexIndex: 2, prompt: "שאלת מבחן: שרטט גובה למשולש מסובב. (הטולרנס 5° בלבד!)", coach: "בדוק 90° ישר מול הבסיס הכחול." }),
         fixQ({ shape: SHAPES.rightTriangleA, baseSide: 2, vertexIndex: 1, prompt: "דני אמר: 'בכל משולש ישר זווית הגובה = אחת הצלעות הניצבות'. האם זה תמיד נכון?", shownLine: { fromIndex: 1, toProjection: { side: 2 } }, options: ["לא – רק לגובה לצלע הניצבת השנייה. לגובה להיפוטנוזה – זה לא צלע", "כן – תמיד הגובה הוא צלע ניצבת", "כן – בכל מקרה של משולש ישר זווית"], correctIndex: 0, ruleText: "גובה לניצבת השנייה = אותה ניצבת. גובה להיפוטנוזה = קטע פנימי חדש." }),

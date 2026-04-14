@@ -2,7 +2,11 @@
 <html lang="he" dir="rtl">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0d0b1a" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>אקדמיית הוגוורטס לגאומטריה ⚡ גבהים</title>
     <meta name="description" content="משחק לימודי לכיתה ה׳ בסגנון הארי פוטר – לומדים גובה במשולש ובמקבילית" />
     <link
@@ -17,7 +21,6 @@
     />
     <link rel="stylesheet" href="./styles.css" />
     <link rel="stylesheet" href="boss_styles.css" />
-    <script defer src="geometry.js"></script>
     <script defer src="hp_boss.js"></script>
     <script defer src="app.js"></script>
   </head>
@@ -32,7 +35,10 @@
     <header class="topbar">
       <div>
         <p class="eyebrow">⚡ אקדמיית הוגוורטס לגאומטריה</p>
-        <h1>הצלמונית הקסומה: לחשי הגבהים</h1>
+        <h1 style="display:flex; align-items:center; gap:12px;">
+          <img src="assets/icon_crest_1776142554052.png" alt="Crest" style="height: 40px;"/>
+          הצלמונית הקסומה: לחשי הגבהים
+        </h1>
       </div>
       <div class="topbar-actions">
         <button id="soundToggle" class="ghost-button">🔊 קסם קולי</button>
@@ -43,7 +49,10 @@
     <main class="layout">
       <aside class="sidebar">
         <section class="panel story-panel">
-          <p class="panel-kicker">📖 ספר הלחשים הגדול</p>
+          <p class="panel-kicker" style="display:flex; align-items:center;">
+             <img src="assets/icon_spellbook_1776142525609.png" alt="Spellbook" style="height: 24px; margin-left: 8px;"/>
+             ספר הלחשים הגדול
+          </p>
           <h2 id="storyTitle">🏰 הגשר הקסום קרס!</h2>
           <p id="storyText">
             הגשר שמחבר את מגדל גריפינדור לחדרי הלימוד קרס בגלל לחש רע.
@@ -187,6 +196,7 @@
               <p id="stageGoal" class="stage-goal"></p>
             </div>
             <div class="stage-meta">
+              <div id="playerLives" class="stage-chip" style="color:#ef4444; border-color:rgba(239,68,68,0.3)">❤️❤️❤️</div>
               <div id="stageCounter" class="stage-chip">שאלה 1 / 10</div>
               <div id="challengeTimer" class="stage-chip hidden">60</div>
             </div>
@@ -212,6 +222,10 @@
               <div class="question-topline">
                 <p id="questionPrompt" class="question-prompt"></p>
                 <p id="questionStory" class="question-story"></p>
+              </div>
+              <div id="lightningBarContainer" class="lightning-bar-container hidden">
+                <div class="lightning-label">⏳ חובה לחש במהירות!</div>
+                <div id="lightningBarFill" class="lightning-bar-fill"></div>
               </div>
               <div id="choiceArea" class="choice-area"></div>
               <div id="feedbackArea" class="feedback-area"></div>

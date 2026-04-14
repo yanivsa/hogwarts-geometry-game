@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <path d="M20 80 Q 50 90 80 80 L 70 60 Q 50 30 50 10 L 30 60 Z" fill="#5d4037" stroke="#3e2723" stroke-width="2" />
+  <path d="M40 50 Q 50 45 60 50" fill="none" stroke="#3e2723" stroke-width="2" /> <!-- Mouth -->
+  <circle cx="45" cy="40" r="2" fill="#3e2723" />
+  <circle cx="55" cy="40" r="2" fill="#3e2723" />
+</svg>

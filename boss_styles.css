@@ -258,3 +258,41 @@
   margin-top: 6px;
   line-height: 1.6;
 }
+
+/* ══════════════════════════════════
+   📱  MOBILE OVERRIDES
+══════════════════════════════════ */
+@media (max-width: 768px) {
+  .wand-designer {
+    grid-template-columns: 1fr;
+    padding: 0 8px;
+    gap: 14px;
+    margin-top: 14px;
+  }
+
+  .wand-choice-btn {
+    padding: 14px 12px;
+    min-height: 56px; /* easier tap target */
+  }
+
+  .voldemort-panel {
+    margin-bottom: 10px;
+    padding: 10px 12px;
+  }
+
+  .voldemort-speech #voldemortClaim {
+    font-size: 0.83rem;
+  }
+
+  .boss-defeat-card {
+    padding: 14px;
+  }
+
+  .boss-defeat-header > span:first-child {
+    font-size: 1.8rem;
+  }
+
+  .boss-defeat-header h3 {
+    font-size: 0.95rem;
+  }
+}
